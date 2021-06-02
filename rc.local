@@ -1,0 +1,30 @@
+#!/bin/sh -e
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+exec 2> /tmp/rc.local.log      # send stderr from rc.local to a log file
+exec 1>&2                      # send stdout to the same log file
+set -x                         # tell sh to display commands before execution
+
+# Print the IP address
+_IP=$(hostname -I) || true
+if [ "$_IP" ]; then
+  printf "My IP address is %s\n" "$_IP"
+fi
+
+# The two lines below work.  Trying to keep BT MAC address in script
+#rfcomm bind rfcomm0 00:06:66:BC:B2:DA
+#(sleep 10; su pi -c '~pi/bin/dataHandler.sh' > /dev/null ) & 
+
+( '/home/pi/bin/dataHandler.sh' > /dev/null ) & 
+
+exit 0

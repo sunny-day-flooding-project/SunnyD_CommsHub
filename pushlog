@@ -1,0 +1,3 @@
++ PIC_DIR=/mnt/nas/SunnyD/SunnyD01/webcam/
++ timeout -s 2 119s lftp sftp://sunnyd:SunnyD6841@wave.ims.unc.edu -e 'mirror -R -c -v /home/pi/webcam/ /mnt/nas/SunnyD/SunnyD01/webcam/; bye'
+Transferring file `20210301/20210301_1430.jpg'

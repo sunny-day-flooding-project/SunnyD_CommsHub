@@ -1,0 +1,10 @@
+Pressure-MPR.18.24.0.0.log=1
+Pressure-MPR.18.24.0.0.minimumPSI=0
+Pressure-MPR.18.24.0.0.maximumPSI=25
+Pressure-MPR.18.24.0.0.usePSI=0
+Pressure-MPR.18.24.0.0.usePA=0
+Pressure-MPR.18.24.0.0.useKPA=1
+Pressure-MPR.18.24.0.0.useTORR=0
+Pressure-MPR.18.24.0.0.useINHG=0
+Pressure-MPR.18.24.0.0.useATM=0
+Pressure-MPR.18.24.0.0.useBAR=0
