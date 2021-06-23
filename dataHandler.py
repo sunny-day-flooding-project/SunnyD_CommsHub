@@ -54,9 +54,32 @@ class OLAdata:
 
     # If the inData look like real data populate the variables
     # otherwise leave them uninitialized.
+    
+#   This version of parseData was for the micro-pressure sensor     
+#    def parseData(self):
+#        l = self.inString.split(',')
+#        if len(l)==10:     # num elements+1, split makes a token out of the trailing crlf
+#            # If any exception, clear the input.  If it was a bad transmission
+#            # the check sequential step should catch it.
+#            try:
+#                self.obsDateTime = datetime.strptime(l[0]+' '+l[1], "%m/%d/%Y %H:%M:%S.%f")
+#                self.battVolts = float(l[2])
+#                self.aX = float(l[3])
+#                self.aY = float(l[4])
+#                self.aZ = float(l[5])
+#                self.temp = float(l[6])
+#                self.press = float(l[7])
+#                self.obsNum = int(l[8])
+#                #print(vars(self))
+#            except:
+#                self.inString = ''# Clear inString if this fails parsing
+#        else:
+#            self.inString = ''    # Clear inString if this fails parsing
+
+#   This version of parseData is for the Bar02 sensor
     def parseData(self):
         l = self.inString.split(',')
-        if len(l)==10:     # num elements+1, split makes a token out of the trailing crlf
+        if len(l)==11:     # num elements+1, split makes a token out of the trailing crlf
             # If any exception, clear the input.  If it was a bad transmission
             # the check sequential step should catch it.
             try:
@@ -67,7 +90,8 @@ class OLAdata:
                 self.aZ = float(l[5])
                 self.temp = float(l[6])
                 self.press = float(l[7])
-                self.obsNum = int(l[8])
+                self.wtemp = float(l[8])
+                self.obsNum = int(l[9])
                 #print(vars(self))
             except:
                 self.inString = ''# Clear inString if this fails parsing
@@ -103,14 +127,18 @@ def write_database(newData):
 #    db_url = config['dataHandler']['DB_URL'] + "/bite_water_level"     # for testing, this makes the write fail
     post_data = { 'key':config['dataHandler']['API_KEY'],
                   'place':config['dataHandler']['PLACE'],
-                  'sensor_id':config['dataHandler']['SENSOR_ID'],
+                  'sensor_id':config['dataHandler']['SITE_ID'],
                   'dttm':newData.obsDateTime.strftime('%Y%m%d%H%M%S'),
-                  'pressure':newData.press * 10.0,           # convert kPa to mBar
+#                  'pressure':newData.press * 10.0,           # convert kPa to mBar (for the micro-pressure sensor data)
+
+                  # Calibrate pressure value while writing to database
+                  'pressure':newData.press - float(config['dataHandler']['SENSOR_OFFSET']) - (float(config['dataHandler']['SENSOR_TEMP_FACTOR']) * newData.wtemp),
                   'voltage':newData.battVolts,
                   'seqNum':newData.obsNum,
                   'aX':newData.aX,
                   'aY':newData.aY,
                   'aZ':newData.aZ,
+                  'wtemp':newData.wtemp,
                   'notes':" " }
     xdata = urllib.parse.urlencode(post_data, quote_via=urllib.parse.quote)
 
@@ -145,7 +173,7 @@ def update_db_from_logged_files():
     
     db_url = config['dataHandler']['DB_URL'] + "/latest_water_level"
     get_data = { 'key':config['dataHandler']['API_KEY'],
-                 'sensor_id':config['dataHandler']['SENSOR_ID'] }
+                 'sensor_id':config['dataHandler']['SITE_ID'] }
     try:
         rd = requests.get(url=db_url, params=get_data)
     except:
@@ -217,7 +245,7 @@ def update_db_from_data_files():
     
     db_url = config['dataHandler']['DB_URL'] + "/latest_water_level"
     get_data = { 'key':config['dataHandler']['API_KEY'],
-                 'sensor_id':config['dataHandler']['SENSOR_ID'] }
+                 'sensor_id':config['dataHandler']['SITE_ID'] }
     try:
         rd = requests.get(url=db_url, params=get_data)
     except:
