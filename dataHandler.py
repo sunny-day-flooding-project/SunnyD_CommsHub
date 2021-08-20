@@ -250,7 +250,7 @@ def update_db_from_data_files():
         rd = requests.get(url=db_url, params=get_data)
     except:
         success = False
-        return success
+        return prevData
         
     print(rd.url)
     print(rd.text)
