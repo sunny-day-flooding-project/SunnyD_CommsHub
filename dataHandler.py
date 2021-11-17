@@ -305,37 +305,55 @@ def download_data_files():
 # Remove matching entries (same name and size)
 # Download anything remaining in the OLA list
 # Update the database from these files (in the list)
+#
+# A situation arose where the file numbering started over on the OLA, yet there
+# were many files with larger numbers.  This triggered an archival and full download
+# of files each time download_data_files was called.  Apart from being unnecessary, that
+# put a huge load on the batteries of the sensor.  Therefore I am changing the algorithm
+# to be for only files with a number less than or equal the current file number.
+#
 
     prevData = OLAdata('')
     fileDir = config['dataHandler']['DOWNLOADED_FILE_DIR']
     
     ss = fdpexpect.fdspawn(ser)    # set up to use ss with pexpect
     
-    ola_fdict = get_OLA_file_list(ss)
+    ola_fdict = get_OLA_file_list(ss)   # the file list is sorted in date order
     if len(ola_fdict)==0:
         return prevData    # we failed
 
-    flist = os.listdir(fileDir)
-    for fn in flist:
+    # The next two lines get the local file list and sorts them in date order
+    os.chdir(fileDir)
+    flist = sorted(filter(os.path.isfile, os.listdir(fileDir)), key=os.path.getmtime)
+    
+    # For each file in the OLA file list, check to see if we already have one
+    # with the same file name and size.  If so, remove it from the list.
+    for fn in flist:    
         sz = os.path.getsize(fileDir+"/"+fn)
         # Remove the files we already have from the ola file list
-        if fn in ola_fdict and sz == ola_fdict.get(fn):
+        if fn in ola_fdict.keys() and sz == ola_fdict.get(fn):
             ola_fdict.pop(fn, None)
             
-    # If the ola_fdict has any filenames other than the latest,
+    # If the ola_fdict (list of files to download) has any filenames (numbers)
+    # remaining less than the latest local file,
     # the file numbers might have reset (or some other problem has happened).
     # Archive all the files that we have before we download the list.
-    if len( set(flist[:-1]).intersection(ola_fdict.keys()) ) > 0:
+    if len(flist)>0 and list(ola_fdict.keys())[0] < flist[-1]:    # because the filenames are identical except for number, they can be compared
         print('WARNING: Archiving data files due to repeat download of finished file. (New OLA? File numbers reset?)')
         archive_dir = fileDir + '/Archived-' + datetime.today().strftime('%Y%m%d%H%M%S')
         os.chdir(fileDir)    # need to be here for zmodem receive
         os.mkdir(archive_dir)
         os.system('mv *.* '+archive_dir)
             
-    # Send the files in ola_fdict in order in case of a failure
-    os.chdir(fileDir)    # need to be here for zmodem receive
-    sorted_filedict = sorted(ola_fdict)
-    for fn in sorted_filedict:
+    # The error case had the OLA logging to a file number less than the maximum.
+    # Remove any files from the download list (ola_fdict) with numbers larger
+    # than the latest one.
+    for fn in ola_fdict.keys():
+        if fn > list(ola_fdict.keys())[-1]:
+            ola_fdict.pop(fn, None)
+    
+    # Send the files in ola_fdict
+    for fn in ola_fdict:
         print("Sending: " + fn, flush=True)
         time.sleep(1)
         ss.sendline('sz '+ fn)
@@ -350,8 +368,9 @@ def download_data_files():
 
 # Procedure for retrieving the list of files on the OLA
 def get_OLA_file_list(ss):
-# get a dictionary of files and file sizes from the OLA
+# get a dictionary of files and file sizes from the OLA sorted in date order
     fileDict = {}    # declare empty dictionary
+    dtDict = {}
     
     if get_OLA_menu(ss)==False:
         return fileDict    # empty dict 
@@ -386,7 +405,9 @@ def get_OLA_file_list(ss):
     for ll in blines:
         if ll.find(b'dataLog') != -1:
             lls = ll.split()
+            dtDict.update({ lls[3].decode() : datetime.strptime(lls[0].decode()+" "+lls[1].decode(), '%Y-%m-%d %H:%M')})
             fileDict.update({ lls[3].decode() : int(lls[2]) })
+    fileDict = {k:v for k,v in sorted(fileDict.items(), key=lambda x : dtDict[x[0]] )}
     return fileDict
 
 
