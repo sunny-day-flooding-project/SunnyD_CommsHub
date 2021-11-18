@@ -464,6 +464,8 @@ def main():
     RESTLESS = 0.0001   # sleep time in seconds (RasPi 4 will sleep about .0002 for its minimum)
     MELLOW = 1
     sleep_time = RESTLESS
+    data_delay_start_time = time.time() # time how long since data in case we are stuck in the file transfer menu
+    MAX_DATA_DELAY = config['dataHandler']['MAX_DATA_DELAY']
         
     while True:
         try:
@@ -481,6 +483,7 @@ def main():
             print("Bluetooth error, waiting for comm port.", flush=True)
         if was_bt_err==True and BT_ERROR==False:
             print("Comm port restored.", flush=True)
+            data_delay_start_time = time.time()     # restart the timer if we have just regained bluetooth
         was_bt_err = BT_ERROR
         
         # If we need the menu, we have to be fast.  Sleep time will be set to minimum, and as soon
@@ -491,6 +494,7 @@ def main():
         # until it succeeds.
         #
         if nchars > 0:
+            data_delay_start_time = time.time() # we received something so reset the timer
             if want_file_download == True:
                 prevData = download_data_files()
                 want_file_download = False
@@ -527,8 +531,13 @@ def main():
                     if DB_OUT_OF_SYNC == False:    # check again - don't use else!
                         # write the incoming data to local file and database
                         DB_OUT_OF_SYNC = not write_database(newData)
-                    
+        
+        # no chars
         time.sleep(sleep_time)
+        if time.time() - data_delay_start_time > float(MAX_DATA_DELAY):
+            ss = fdpexpect.fdspawn(ser)    # set up to use ss with pexpect
+            exit_zmodem(ss)
+            data_delay_start_time = time.time()
 
 # Call main if necessary
 if __name__ == "__main__":
