@@ -35,6 +35,15 @@ print = timestamped_print
 
 # if we catch a signal from the OS, clean up and exit
 def signal_handler(sig, frame):
+    # ignore additional signals
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    signal.signal(signal.SIGHUP, signal.SIG_IGN)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGQUIT, signal.SIG_IGN)
+    signal.signal(signal.SIGILL, signal.SIG_IGN)
+    signal.signal(signal.SIGABRT, signal.SIG_IGN)
+    signal.signal(signal.SIGFPE, signal.SIG_IGN)
+    signal.signal(signal.SIGSEGV, signal.SIG_IGN)
     print('Intercepted a signal - Stopping!', flush=True)
     ser.close()
     sys.exit(0)
@@ -497,6 +506,7 @@ def main():
             data_delay_start_time = time.time() # we received something so reset the timer
             if want_file_download == True:
                 prevData = download_data_files()
+                data_delay_start_time = time.time() # this could have taken a long time
                 want_file_download = False
                 keepPrevData = True    # keep us from overwriting prevData
                 sleep_time = MELLOW
