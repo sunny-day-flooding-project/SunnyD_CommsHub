@@ -357,7 +357,8 @@ def download_data_files():
     # The error case had the OLA logging to a file number less than the maximum.
     # Remove any files from the download list (ola_fdict) with numbers larger
     # than the latest one.
-    for fn in ola_fdict.keys():
+    k=ola_fdict.copy()
+    for fn in k.keys():
         if fn > list(ola_fdict.keys())[-1]:
             ola_fdict.pop(fn, None)
     
