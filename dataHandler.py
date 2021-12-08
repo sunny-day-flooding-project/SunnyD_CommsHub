@@ -487,6 +487,7 @@ def main():
             time.sleep(10)
             ser.open()
             time.sleep(10)
+            data_delay_start_time = time.time()     # keep restarting the timer while bluetooth port is down
             
         if was_bt_err==False and BT_ERROR==True:
             print("Bluetooth error, waiting for comm port.", flush=True)
