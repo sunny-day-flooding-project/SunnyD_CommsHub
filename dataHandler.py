@@ -369,10 +369,10 @@ def download_data_files():
         ss.sendline('sz '+ fn)
         time.sleep(1)
         os.system("rz --overwrite > /dev/rfcomm0 < /dev/rfcomm0")
+    exit_zmodem(ss)
         
     # update the database with the new data and set prevData to most recent
     prevData = update_db_from_data_files()
-    exit_zmodem(ss)
     return prevData
 
 
