@@ -22,6 +22,7 @@ import sys
 import requests
 import urllib
 import os
+from os.path import exists
 import glob
 from datetime import datetime
 from datetime import timedelta
@@ -412,12 +413,21 @@ def get_OLA_file_list(ss):
         return fileDict
     # Now parse the before to look for dataLog?????.txt and the token before it which is size
     blines = ss.before.splitlines()
-    for ll in blines:
-        if ll.find(b'dataLog') != -1:
-            lls = ll.split()
-            dtDict.update({ lls[3].decode() : datetime.strptime(lls[0].decode()+" "+lls[1].decode(), '%Y-%m-%d %H:%M')})
-            fileDict.update({ lls[3].decode() : int(lls[2]) })
-    fileDict = {k:v for k,v in sorted(fileDict.items(), key=lambda x : dtDict[x[0]] )}
+    try:
+        for ll in blines:
+            if ll.find(b'dataLog') != -1:
+                lls = ll.split()
+                dtDict.update({ lls[3].decode() : datetime.strptime(lls[0].decode()+" "+lls[1].decode(), '%Y-%m-%d %H:%M')})
+                fileDict.update({ lls[3].decode() : int(lls[2]) })
+        fileDict = {k:v for k,v in sorted(fileDict.items(), key=lambda x : dtDict[x[0]] )}
+    except Exception as ex:
+        print("Exception decoding file directory")
+        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+        message = template.format(type(ex).__name__, ex.args)
+        print(message)
+        exit_zmodem(ss)
+        return fileDict
+    
     return fileDict
 
 
@@ -480,14 +490,16 @@ def main():
     while True:
         try:
             nchars = ser.in_waiting
+            #print(nchars)
             BT_ERROR = False
         except:  # comm port must be down
             nchars = 0
             BT_ERROR=True
             ser.close()
-            time.sleep(10)
-            ser.open()
-            time.sleep(10)
+            time.sleep(3) # these used to be 10 s each.
+            if exists('/dev/rfcomm0'):
+                ser.open()
+            time.sleep(3)
             data_delay_start_time = time.time()     # keep restarting the timer while bluetooth port is down
             
         if was_bt_err==False and BT_ERROR==True:
@@ -565,8 +577,14 @@ if __name__ == "__main__":
     signal.signal(signal.SIGFPE, signal_handler)
     signal.signal(signal.SIGSEGV, signal_handler)
     
-
-    ser = serial.Serial('/dev/rfcomm0', 115200, timeout=1)
+    device_file = '/dev/rfcomm0'
+    print('Attempting to open ' + device_file, end='')
+    while not exists(device_file):
+        old_print('.', end='')
+        time.sleep(3)
+    old_print(' ')
+        
+    ser = serial.Serial(device_file, 115200, timeout=1)
     print('Opened: ' + ser.name, flush=True)    # just checking the name
     time.sleep(10)
 
