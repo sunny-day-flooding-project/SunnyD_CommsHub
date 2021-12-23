@@ -129,44 +129,49 @@ def write_local_file(newData):
 
 # write the observation to the cloud database
 def write_database(newData):
-    # database access is through http "post" for example:
-    # https://api-sunnydayflood.cloudapps.unc.edu/write_water_level?key=jjRa6S550zvTxMF&place=Carolina%20Beach
-    #%2C%20North%20Carolina&sensor_id=CB_02&dttm=20210223050000&level=-.25&voltage=4.8&notes=test 
-    #
-    db_url = config['dataHandler']['DB_URL'] + "/write_water_level"
-#    db_url = config['dataHandler']['DB_URL'] + "/bite_water_level"     # for testing, this makes the write fail
-    post_data = { 'key':config['dataHandler']['API_KEY'],
-                  'place':config['dataHandler']['PLACE'],
-                  'sensor_id':config['dataHandler']['SITE_ID'],
-                  'dttm':newData.obsDateTime.strftime('%Y%m%d%H%M%S'),
-#                  'pressure':newData.press * 10.0,           # convert kPa to mBar (for the micro-pressure sensor data)
+    no_logging = config['dataHandler']['DB_URL'].lower().startswith('no')   # if operating without a database
+    
+    if no_logging == True:
+        success=True
+    else:
+        # database access is through http "post" for example:
+        # https://api-sunnydayflood.cloudapps.unc.edu/write_water_level?key=jjRa6S550zvTxMF&place=Carolina%20Beach
+        #%2C%20North%20Carolina&sensor_id=CB_02&dttm=20210223050000&level=-.25&voltage=4.8&notes=test 
+        #
+        db_url = config['dataHandler']['DB_URL'] + "/write_water_level"
+    #    db_url = config['dataHandler']['DB_URL'] + "/bite_water_level"     # for testing, this makes the write fail
+        post_data = { 'key':config['dataHandler']['API_KEY'],
+                      'place':config['dataHandler']['PLACE'],
+                      'sensor_id':config['dataHandler']['SITE_ID'],
+                      'dttm':newData.obsDateTime.strftime('%Y%m%d%H%M%S'),
+    #                  'pressure':newData.press * 10.0,           # convert kPa to mBar (for the micro-pressure sensor data)
 
-                  # Calibrate pressure value while writing to database
-                  'pressure':newData.press - float(config['dataHandler']['SENSOR_OFFSET']) - (float(config['dataHandler']['SENSOR_TEMP_FACTOR']) * newData.wtemp),
-                  'voltage':newData.battVolts,
-                  'seqNum':newData.obsNum,
-                  'aX':newData.aX,
-                  'aY':newData.aY,
-                  'aZ':newData.aZ,
-                  'wtemp':newData.wtemp,
-                  'notes':" " }
-    xdata = urllib.parse.urlencode(post_data, quote_via=urllib.parse.quote)
+                      # Calibrate pressure value while writing to database
+                      'pressure':newData.press - float(config['dataHandler']['SENSOR_OFFSET']) - (float(config['dataHandler']['SENSOR_TEMP_FACTOR']) * newData.wtemp),
+                      'voltage':newData.battVolts,
+                      'seqNum':newData.obsNum,
+                      'aX':newData.aX,
+                      'aY':newData.aY,
+                      'aZ':newData.aZ,
+                      'wtemp':newData.wtemp,
+                      'notes':" " }
+        xdata = urllib.parse.urlencode(post_data, quote_via=urllib.parse.quote)
 
-    try:
-        r=requests.post(url=db_url, params=xdata, timeout=10)
-#        print(r.url)
-#        print(r.text)
-        r.raise_for_status()    # throw an exception if the status is bad
-        success = True
-    except Exception as ex:
-        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-        message = template.format(type(ex).__name__, ex.args)
-        print(message)
-        # In order to resync the database, check to see if the next sequence number is in the data files,
-        # if so try to put it in after the next observation.  If not, we might need to get the data files
-        # and use date to keep up-to-date
-        print("Exception posting to database.  Database out of sync.")
-        success = False
+        try:
+            r=requests.post(url=db_url, params=xdata, timeout=10)
+    #        print(r.url)
+    #        print(r.text)
+            r.raise_for_status()    # throw an exception if the status is bad
+            success = True
+        except Exception as ex:
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
+            # In order to resync the database, check to see if the next sequence number is in the data files,
+            # if so try to put it in after the next observation.  If not, we might need to get the data files
+            # and use date to keep up-to-date
+            print("Exception posting to database.  Database out of sync.")
+            success = False
     return success
 
 
@@ -243,6 +248,7 @@ def update_db_from_logged_files():
 # If we recently downloaded data files and need to re-sync the data, we will
 # read through the data files to re-sync.
 def update_db_from_data_files():
+    no_logging = config['dataHandler']['DB_URL'].lower().startswith('no')   # if operating without a database
     success = False
     one_second = timedelta(seconds=1)
     # This is a modification of update_db_from_logged_files.
@@ -252,22 +258,29 @@ def update_db_from_data_files():
     # if so, write it to the db.  Do this until caught up
     prevData = OLAdata('')    
     print("Attempting to catch database up from data files.")
+    if no_logging:
+        print()
+        print("  NOT ACTUALLY LOGGING TO DATABASE  ")
+        print()
     
     db_url = config['dataHandler']['DB_URL'] + "/latest_water_level"
     get_data = { 'key':config['dataHandler']['API_KEY'],
                  'sensor_id':config['dataHandler']['SITE_ID'] }
-    try:
-        rd = requests.get(url=db_url, params=get_data)
-    except:
-        success = False
-        return prevData
-        
-    print(rd.url)
-    print(rd.text)
-    j = rd.json()
-    lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%d %H:%M:%S")
-    UTCtoEST = timedelta(hours=5)
-    lastDate = lastDate - UTCtoEST
+    if not no_logging:
+        try:
+            rd = requests.get(url=db_url, params=get_data)
+        except:
+            success = False
+            return prevData
+            
+        print(rd.url)
+        print(rd.text)
+        j = rd.json()
+        lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%d %H:%M:%S")
+        UTCtoEST = timedelta(hours=5)
+        lastDate = lastDate - UTCtoEST
+    else:
+        lastDate = datetime.now()-timedelta(days=10)
     print(lastDate)
 
     # get a list of data files - since the dates in them are unknown, have to open them all
@@ -282,7 +295,7 @@ def update_db_from_data_files():
             fdata = OLAdata(fline.encode("ascii", "ignore"))
             if fdata.inString != '':    # if the line fails parsing we will skip it.
                 if fdata.obsDateTime > (lastDate+one_second):
-                    if write_database(fdata) == True:
+                    if no_logging or write_database(fdata) == True:
                         lastDate = fdata.obsDateTime
                         prevData = fdata
                         success = True
@@ -484,6 +497,7 @@ def get_OLA_menu(ss):
 
 def main():
     newData = OLAdata('')       # initialize empty
+    prevData= OLAdata('')
     keepPrevData = True         # init to true so first loop doesn't overwrite prevData
     DB_OUT_OF_SYNC = False
     BT_ERROR = False
@@ -494,6 +508,7 @@ def main():
     sleep_time = RESTLESS
     data_delay_start_time = time.time() # time how long since data in case we are stuck in the file transfer menu
     MAX_DATA_DELAY = config['dataHandler']['MAX_DATA_DELAY']
+    no_logging = config['dataHandler']['DB_URL'].lower().startswith('no')
         
     while True:
         try:
