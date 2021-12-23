@@ -460,6 +460,14 @@ def get_OLA_menu(ss):
         try:
             ss.sendline(' ')
             found=ss.expect(['Menu: Main Menu', pexpect.TIMEOUT], timeout=0.3)
+        except pexpect.exceptions.EOF as e:
+            print("Caught EOF error - waiting for port to re-appear")
+            ser.close()
+            while not exists('/dev/rfcomm0'):
+                time.sleep(3)
+            ser.open()
+            time.sleep(3)
+            continue
         except Exception as ex:
             print("Exception waiting for main menu")
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
