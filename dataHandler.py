@@ -280,7 +280,7 @@ def update_db_from_data_files():
         UTCtoEST = timedelta(hours=5)
         lastDate = lastDate - UTCtoEST
     else:
-        lastDate = datetime.now()-timedelta(days=10)
+        lastDate = datetime.now()-timedelta(days=1)
     print(lastDate)
 
     # get a list of data files - since the dates in them are unknown, have to open them all
@@ -339,7 +339,8 @@ def download_data_files():
     prevData = OLAdata('')
     fileDir = config['dataHandler']['DOWNLOADED_FILE_DIR']
     
-    ss = fdpexpect.fdspawn(ser)    # set up to use ss with pexpect
+    ss = fdpexpect.fdspawn(ser, maxread=65536)    # set up to use ss with pexpect
+    #ss.logfile = sys.stdout
     
     ola_fdict = get_OLA_file_list(ss)   # the file list is sorted in date order
     if len(ola_fdict)==0:
@@ -413,7 +414,7 @@ def get_OLA_file_list(ss):
     time.sleep(2)
     try:
         ss.sendline('dir')
-        ss.expect('End of Directory', timeout=10)
+        ss.expect('End of Directory', timeout=90)
     except Exception as ex:
         print("Exception waiting for file directory")
         template = "An exception of type {0} occurred. Arguments:\n{1!r}"
@@ -582,7 +583,8 @@ def main():
         # no chars
         time.sleep(sleep_time)
         if time.time() - data_delay_start_time > float(MAX_DATA_DELAY):
-            ss = fdpexpect.fdspawn(ser)    # set up to use ss with pexpect
+            ss = fdpexpect.fdspawn(ser, maxread=65536)    # set up to use ss with pexpect
+            #ss.logfile = sys.stdout
             exit_zmodem(ss)
             data_delay_start_time = time.time()
 
