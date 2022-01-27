@@ -342,9 +342,43 @@ def download_data_files():
     ss = fdpexpect.fdspawn(ser, maxread=65536)    # set up to use ss with pexpect
     #ss.logfile = sys.stdout
     
-    ola_fdict = get_OLA_file_list(ss)   # the file list is sorted in date order
-    if len(ola_fdict)==0:
-        return prevData    # we failed
+    # Errors in the transmission of the OLA file list are costly. Try up to 5 times to get 
+    # two identical copies in a row before we call it a good transmission.
+    if get_OLA_menu(ss)==False:
+        return prevData    # failed to get menu 
+    try:
+        ss.send('s')
+        ss.expect('ZModem', timeout=10)
+    except Exception as ex:
+        print("Exception waiting for ZModem menu")
+        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+        message = template.format(type(ex).__name__, ex.args)
+        print(message)
+        print("debug information:")
+        print(str(ss))
+        exit_zmodem(ss)
+        return prevData
+    time.sleep(2)
+
+    try:
+        ola_fdict = get_OLA_file_list(ss)   # the file list is sorted in date order
+        for i in range(5):
+            ola_fdict2= get_OLA_file_list(ss)
+            if ola_fdict == ola_fdict2: # good to go
+                break
+            if i==4:
+                return prevData    # we failed
+            ola_fdict = ola_fdict2
+    except Exception as ex:
+        print("Exception waiting for ZModem menu")
+        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+        message = template.format(type(ex).__name__, ex.args)
+        print(message)
+        print("debug information:")
+        print(str(ss))
+        exit_zmodem(ss)
+        return prevData
+
 
     # The next two lines get the local file list and sorts them in date order
     os.chdir(fileDir)
@@ -378,12 +412,22 @@ def download_data_files():
             ola_fdict.pop(fn, None)
     
     # Send the files in ola_fdict
-    for fn in ola_fdict:
-        print("Sending: " + fn, flush=True)
-        time.sleep(1)
-        ss.sendline('sz '+ fn)
-        time.sleep(1)
-        os.system("rz --overwrite > /dev/rfcomm0 < /dev/rfcomm0")
+    try:
+        for fn in ola_fdict:
+            print("Sending: " + fn, flush=True)
+            time.sleep(1)
+            ss.sendline('sz '+ fn)
+            time.sleep(1)
+            os.system("rz --overwrite > /dev/rfcomm0 < /dev/rfcomm0")
+    except Exception as ex:
+        print("Exception during file transfer")
+        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+        message = template.format(type(ex).__name__, ex.args)
+        print(message)
+        print("debug information:")
+        print(str(ss))
+        print(ss.before)
+        return prevData
     exit_zmodem(ss)
         
     # update the database with the new data and set prevData to most recent
@@ -397,49 +441,24 @@ def get_OLA_file_list(ss):
     fileDict = {}    # declare empty dictionary
     dtDict = {}
     
-    if get_OLA_menu(ss)==False:
-        return fileDict    # empty dict 
-    try:
-        ss.send('s')
-        ss.expect('ZModem', timeout=10)
-    except Exception as ex:
-        print("Exception waiting for ZModem menu")
-        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-        message = template.format(type(ex).__name__, ex.args)
-        print(message)
-        print("debug information:")
-        print(str(ss))
-        exit_zmodem(ss)
-        return fileDict
-    time.sleep(2)
     try:
         ss.sendline('dir')
         ss.expect('End of Directory', timeout=90)
     except Exception as ex:
-        print("Exception waiting for file directory")
-        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-        message = template.format(type(ex).__name__, ex.args)
-        print(message)
-        print("debug information:")
-        print(str(ss))
-        print(ss.before)
-        exit_zmodem(ss)
+        raise ex
         return fileDict
     # Now parse the before to look for dataLog?????.txt and the token before it which is size
     blines = ss.before.splitlines()
     try:
         for ll in blines:
+            old_print(ll)   # print the directory listing - mainly for debugging whether we got a good transmission
             if ll.find(b'dataLog') != -1:
                 lls = ll.split()
                 dtDict.update({ lls[3].decode() : datetime.strptime(lls[0].decode()+" "+lls[1].decode(), '%Y-%m-%d %H:%M')})
                 fileDict.update({ lls[3].decode() : int(lls[2]) })
         fileDict = {k:v for k,v in sorted(fileDict.items(), key=lambda x : dtDict[x[0]] )}
     except Exception as ex:
-        print("Exception decoding file directory")
-        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-        message = template.format(type(ex).__name__, ex.args)
-        print(message)
-        exit_zmodem(ss)
+        raise ex
         return fileDict
     
     return fileDict
@@ -480,7 +499,7 @@ def get_OLA_menu(ss):
             while not exists('/dev/rfcomm0'):
                 time.sleep(3)
             ser.open()
-            time.sleep(3)
+            time.sleep(12)
             continue
         except Exception as ex:
             print("Exception waiting for main menu")
@@ -523,7 +542,7 @@ def main():
             time.sleep(3) # these used to be 10 s each.
             if exists('/dev/rfcomm0'):
                 ser.open()
-            time.sleep(3)
+            time.sleep(12)   # was 3 sec.  Trying 12 to see the the repeated error/restored messages go away
             data_delay_start_time = time.time()     # keep restarting the timer while bluetooth port is down
             
         if was_bt_err==False and BT_ERROR==True:
@@ -564,6 +583,7 @@ def main():
                 keepPrevData = True
                 print("Failed parse: ", end='')
                 old_print(incomingLine.decode(), flush=True)
+                continue    # don't sleep if we have a lot of lines to get rid of
             else:
                 keepPrevData = False
                 if check_sequential(newData, prevData)==False:
