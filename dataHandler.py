@@ -629,7 +629,7 @@ if __name__ == "__main__":
         time.sleep(3)
     old_print(' ')
         
-    ser = serial.Serial(device_file, 115200, timeout=1)
+    ser = serial.Serial(device_file, 115200, timeout=2)
     print('Opened: ' + ser.name, flush=True)    # just checking the name
     time.sleep(10)
 
