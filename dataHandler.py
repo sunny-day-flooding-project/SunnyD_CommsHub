@@ -499,7 +499,7 @@ def get_OLA_menu(ss):
             while not exists('/dev/rfcomm0'):
                 time.sleep(3)
             ser.open()
-            time.sleep(12)
+            time.sleep(1)
             continue
         except Exception as ex:
             print("Exception waiting for main menu")
@@ -538,11 +538,12 @@ def main():
         except:  # comm port must be down
             nchars = 0
             BT_ERROR=True
-            ser.close()
-            time.sleep(3) # these used to be 10 s each.
+            if was_bt_err==False:
+                ser.close()
+                time.sleep(3) # these used to be 10 s each.
             if exists('/dev/rfcomm0'):
                 ser.open()
-            time.sleep(12)   # was 3 sec.  Trying 12 to see the the repeated error/restored messages go away
+                time.sleep(1)   # was 3 sec.  Trying 5 to see the the repeated error/restored messages go away
             data_delay_start_time = time.time()     # keep restarting the timer while bluetooth port is down
             
         if was_bt_err==False and BT_ERROR==True:
@@ -629,7 +630,7 @@ if __name__ == "__main__":
         time.sleep(3)
     old_print(' ')
         
-    ser = serial.Serial(device_file, 115200, timeout=2)
+    ser = serial.Serial(device_file, 115200, timeout=1)
     print('Opened: ' + ser.name, flush=True)    # just checking the name
     time.sleep(10)
 
