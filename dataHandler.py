@@ -543,7 +543,7 @@ def main():
                 time.sleep(3) # these used to be 10 s each.
             if exists('/dev/rfcomm0'):
                 ser.open()
-                time.sleep(1)   # was 3 sec.  Trying 5 to see the the repeated error/restored messages go away
+                time.sleep(2)   # was 3 sec.  Trying 5 to see the the repeated error/restored messages go away
             data_delay_start_time = time.time()     # keep restarting the timer while bluetooth port is down
             
         if was_bt_err==False and BT_ERROR==True:

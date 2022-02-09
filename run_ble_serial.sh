@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-sleep 5
+sleep 20
 python3 /home/pi/bin/ble-autoconnect.py -c /home/pi/bin/autoconnect.ini 2>&1 | tee -a ~pi/data/logs/ble-serial.log
 
 ## This will forever try to keep the serial port running
