@@ -428,10 +428,12 @@ def download_data_files():
         print(str(ss))
         print(ss.before)
         return prevData
-    exit_zmodem(ss)
         
     # update the database with the new data and set prevData to most recent
     prevData = update_db_from_data_files()
+    # would be better if we could exit zmodem before the previous step, but doing
+    # so triggers a sample and we miss it during update_db...
+    exit_zmodem(ss)
     return prevData
 
 
@@ -543,7 +545,7 @@ def main():
                 time.sleep(3) # these used to be 10 s each.
             if exists('/dev/rfcomm0'):
                 ser.open()
-                time.sleep(2)   # was 3 sec.  Trying 5 to see the the repeated error/restored messages go away
+                time.sleep(3)
             data_delay_start_time = time.time()     # keep restarting the timer while bluetooth port is down
             
         if was_bt_err==False and BT_ERROR==True:
