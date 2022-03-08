@@ -540,11 +540,14 @@ def main():
         except:  # comm port must be down
             nchars = 0
             BT_ERROR=True
-            if was_bt_err==False:
-                ser.close()
-                time.sleep(3) # these used to be 10 s each.
-            if exists('/dev/rfcomm0'):
-                ser.open()
+            try:        # these serial operations can raise another exception if they have not completed
+                if was_bt_err==False:
+                    ser.close()
+                    time.sleep(3) # these used to be 10 s each.
+                if exists('/dev/rfcomm0'):
+                    ser.open()
+                    time.sleep(3)
+            except:
                 time.sleep(3)
             data_delay_start_time = time.time()     # keep restarting the timer while bluetooth port is down
             
