@@ -1,7 +1,35 @@
 #!/bin/bash
 #set -x
 
-CAMERA_ID='CAM_BF_01'
+# API_KEY is no longer necessary
+#API_KEY=`cfget --cfg /home/pi/bin/config.ini dataHandler/API_KEY`
+#if [[ -z "$API_KEY" ]]
+#then
+#    echo $'Did not find config value API_KEY.  Exiting\n'
+#    exit 1
+#fi
+
+API_USER=`cfget --cfg /home/pi/bin/config.ini dataHandler/API_USER`
+if [[ -z "$API_USER" ]]
+then
+    echo $'Did not find config value API_USER.  Exiting\n'
+    exit 1
+fi
+
+API_PASS=`cfget --cfg /home/pi/bin/config.ini dataHandler/API_PASS`
+if [[ -z "$API_PASS" ]]
+then
+    echo $'Did not find config value API_PASS.  Exiting\n'
+    exit 1
+fi
+
+CAMERA_ID=`cfget --cfg /home/pi/bin/config.ini dataHandler/CAMERA_ID`
+if [[ -z "$CAMERA_ID" ]]
+then
+    echo $'Did not find config value CAMERA_ID.  Exiting\n'
+    exit 1
+fi
+
 PIC_DIR_BASE='/home/pi/webcam'
 cd $PIC_DIR_BASE
 
@@ -17,7 +45,7 @@ echo "Retrieving latest picture info from data base."
 
 CO=$(curl --progress-bar \
        	"https://photos-sunnydayflood.apps.cloudapps.unc.edu/get_latest_picture_info?camera_ID=$CAMERA_ID" \
-	--basic --user sunnyd_db_username:SunnyD_beaufort )
+	--basic --user $API_USER:$API_PASS )
 echo
 echo $CO
 echo
@@ -64,7 +92,7 @@ do
                     -F "file=@$picfile;type=image/jpeg" \
                     -F "camera_ID=$CAMERA_ID;type=*/*" \
                     -F "timezone=EST;type=*/*" \
-                    --basic --user sunnyd_db_username:SunnyD_beaufort )
+                    --basic --user $API_USER:$API_PASS )
                 
 				status="$?"
 				echo -n "Return form curl: "
