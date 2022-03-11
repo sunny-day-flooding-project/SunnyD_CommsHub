@@ -1,4 +1,5 @@
 #!/bin/bash
+#set -x
 
 CAMERA_ID='CAM_BF_01'
 PIC_DIR_BASE='/home/pi/webcam'
@@ -10,7 +11,18 @@ shopt -u nullglob # Turn off nullglob to make sure it doesn't interfere with any
 #echo "${PIC_DIRS[@]}"  # Note double-quotes to avoid extra parsing of funny characters in filenames
 
 echo "Retrieving latest picture info from data base."
-LATEST_DATE=$(curl --progress-bar "https://photos-sunnydayflood.apps.cloudapps.unc.edu/get_latest_picture_info?key=jjRa6S550zvTxMF&camera_ID=$CAMERA_ID" | jq '.[0].DateTimeOriginal')
+
+# API call pre March 2022
+#LATEST_DATE=$(curl --progress-bar "https://photos-sunnydayflood.apps.cloudapps.unc.edu/get_latest_picture_info?key=jjRa6S550zvTxMF&camera_ID=$CAMERA_ID" | jq '.[0].DateTimeOriginal')
+
+CO=$(curl --progress-bar \
+       	"https://photos-sunnydayflood.apps.cloudapps.unc.edu/get_latest_picture_info?camera_ID=$CAMERA_ID" \
+	--basic --user sunnyd_db_username:SunnyD_beaufort )
+echo
+echo $CO
+echo
+LATEST_DATE=$(echo $CO | jq '.[0].DateTimeOriginal')
+
 
 DATE_NUM=${LATEST_DATE:1:4}${LATEST_DATE:6:2}${LATEST_DATE:9:2}${LATEST_DATE:12:2}${LATEST_DATE:15:2}
 
@@ -41,9 +53,19 @@ do
 			then
 				echo $'\nAdding '$pf' to database.'
 				# Push the file to the db, bail out if this fails
+
+# API Call pre-March 2022                
+#				ret=$(curl --max-time 30 -X POST \
+#				"https://photos-sunnydayflood.apps.cloudapps.unc.edu/upload_picture?key=jjRa6S550zvTxMF&camera_ID=$CAMERA_ID&timezone=EST" \
+#				-H "accept: */*" -H "Content-Type: multipart/form-data" -F "file=@$picfile;type=image/jpeg")
+
 				ret=$(curl --max-time 30 -X POST \
-				"https://photos-sunnydayflood.apps.cloudapps.unc.edu/upload_picture?key=jjRa6S550zvTxMF&camera_ID=$CAMERA_ID&timezone=EST" \
-				-H "accept: */*" -H "Content-Type: multipart/form-data" -F "file=@$picfile;type=image/jpeg")
+                    "https://photos-sunnydayflood.apps.cloudapps.unc.edu/upload_picture" \
+                    -F "file=@$picfile;type=image/jpeg" \
+                    -F "camera_ID=$CAMERA_ID;type=*/*" \
+                    -F "timezone=EST;type=*/*" \
+                    --basic --user sunnyd_db_username:SunnyD_beaufort )
+                
 				status="$?"
 				echo -n "Return form curl: "
 				echo "$ret"
