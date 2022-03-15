@@ -138,13 +138,14 @@ def write_database(newData):
         # https://api-sunnydayflood.cloudapps.unc.edu/write_water_level?key=jjRa6S550zvTxMF&place=Carolina%20Beach
         #%2C%20North%20Carolina&sensor_id=CB_02&dttm=20210223050000&level=-.25&voltage=4.8&notes=test 
         #
-        db_url = config['dataHandler']['DB_URL'] + "/write_water_level"
+        db_url = config['dataHandler']['DB_URL'] + "/write_measurement"
+#OLD API        db_url = config['dataHandler']['DB_URL'] + "/write_water_level"
     #    db_url = config['dataHandler']['DB_URL'] + "/bite_water_level"     # for testing, this makes the write fail
-        post_data = { 'key':config['dataHandler']['API_KEY'],
+        post_data = { #OLD API 'key':config['dataHandler']['API_KEY'],
                       'place':config['dataHandler']['PLACE'],
-                      'sensor_id':config['dataHandler']['SITE_ID'],
-                      'dttm':newData.obsDateTime.strftime('%Y%m%d%H%M%S'),
-    #                  'pressure':newData.press * 10.0,           # convert kPa to mBar (for the micro-pressure sensor data)
+                      'sensor_ID':config['dataHandler']['SITE_ID'],
+#OLD API                      'dttm':newData.obsDateTime.strftime('%Y%m%d%H%M%S'),
+                      'date':newData.obsDateTime.strftime('%Y%m%d%H%M%S'),
 
                       # Calibrate pressure value while writing to database
                       'pressure':newData.press - float(config['dataHandler']['SENSOR_OFFSET']) - (float(config['dataHandler']['SENSOR_TEMP_FACTOR']) * newData.wtemp),
@@ -155,12 +156,13 @@ def write_database(newData):
                       'aZ':newData.aZ,
                       'wtemp':newData.wtemp,
                       'notes':" " }
-        xdata = urllib.parse.urlencode(post_data, quote_via=urllib.parse.quote)
+#OLD API        xdata = urllib.parse.urlencode(post_data, quote_via=urllib.parse.quote)
 
         try:
-            r=requests.post(url=db_url, params=xdata, timeout=10)
-    #        print(r.url)
-    #        print(r.text)
+#OLD API            r=requests.post(url=db_url, params=xdata, timeout=10)
+            r=requests.post(url=db_url, json=post_data, timeout=10, auth=(config['dataHandler']['API_USER'], config['dataHandler']['API_PASS']))
+            #old_print(r.url)
+            #old_print(r.text)
             r.raise_for_status()    # throw an exception if the status is bad
             success = True
         except Exception as ex:
@@ -186,11 +188,14 @@ def update_db_from_logged_files():
     
     print("Attempting to catch database up from logged files.")
     
-    db_url = config['dataHandler']['DB_URL'] + "/latest_water_level"
-    get_data = { 'key':config['dataHandler']['API_KEY'],
-                 'sensor_id':config['dataHandler']['SITE_ID'] }
+#OLD API    db_url = config['dataHandler']['DB_URL'] + "/latest_water_level"
+#    get_data = { 'key':config['dataHandler']['API_KEY'],
+#                 'sensor_id':config['dataHandler']['SITE_ID'] }
+    db_url = config['dataHandler']['DB_URL'] + "/get_latest_measurement"
+    get_data = { 'sensor_ID':config['dataHandler']['SITE_ID'] }
     try:
-        rd = requests.get(url=db_url, params=get_data)
+#OLD API        rd = requests.get(url=db_url, params=get_data)
+        rd = requests.get(url=db_url, params=get_data, auth=(config['dataHandler']['API_USER'], config['dataHandler']['API_PASS']))
     except:
         success = False
         return success
@@ -198,7 +203,8 @@ def update_db_from_logged_files():
     print(rd.url)
     print(rd.text)
     j = rd.json()
-    lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%d %H:%M:%S")
+#OLD API        lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%d %H:%M:%S")
+    lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%dT%H:%M:%S+00:00")
     UTCtoEST = timedelta(hours=5)
     lastDate = lastDate - UTCtoEST
     print(lastDate)
@@ -263,12 +269,15 @@ def update_db_from_data_files():
         print("  NOT ACTUALLY LOGGING TO DATABASE  ")
         print()
     
-    db_url = config['dataHandler']['DB_URL'] + "/latest_water_level"
-    get_data = { 'key':config['dataHandler']['API_KEY'],
-                 'sensor_id':config['dataHandler']['SITE_ID'] }
+#OLD API    db_url = config['dataHandler']['DB_URL'] + "/latest_water_level"
+#    get_data = { 'key':config['dataHandler']['API_KEY'],
+#                 'sensor_id':config['dataHandler']['SITE_ID'] }
+    db_url = config['dataHandler']['DB_URL'] + "/get_latest_measurement"
+    get_data = { 'sensor_ID':config['dataHandler']['SITE_ID'] }
     if not no_logging:
         try:
-            rd = requests.get(url=db_url, params=get_data)
+#OLD API            rd=requests.get(url=db_url, params=get_data, timeout=10)
+            rd=requests.get(url=db_url, params=get_data, timeout=10, auth=(config['dataHandler']['API_USER'], config['dataHandler']['API_PASS']))
         except:
             success = False
             return prevData
@@ -276,7 +285,8 @@ def update_db_from_data_files():
         print(rd.url)
         print(rd.text)
         j = rd.json()
-        lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%d %H:%M:%S")
+#OLD API        lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%d %H:%M:%S")
+        lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%dT%H:%M:%S+00:00")
         UTCtoEST = timedelta(hours=5)
         lastDate = lastDate - UTCtoEST
     else:
