@@ -145,7 +145,7 @@ def write_database(newData):
                       'place':config['dataHandler']['PLACE'],
                       'sensor_ID':config['dataHandler']['SITE_ID'],
 #OLD API                      'dttm':newData.obsDateTime.strftime('%Y%m%d%H%M%S'),
-                      'date':newData.obsDateTime.strftime('%Y%m%d%H%M%S'),
+                      'date':newData.obsDateTime.astimezone().isoformat(),
 
                       # Calibrate pressure value while writing to database
                       'pressure':newData.press - float(config['dataHandler']['SENSOR_OFFSET']) - (float(config['dataHandler']['SENSOR_TEMP_FACTOR']) * newData.wtemp),
