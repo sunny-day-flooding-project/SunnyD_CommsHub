@@ -1,6 +1,11 @@
 #!/bin/bash
 #set -x
 
+if pidof -o %PPID -x "images2api.sh">/dev/null; then
+	echo "Process already running"
+	exit 1
+fi
+
 # API_KEY is no longer necessary
 #API_KEY=`cfget --cfg /home/pi/bin/config.ini dataHandler/API_KEY`
 #if [[ -z "$API_KEY" ]]
