@@ -21,10 +21,6 @@ if [ "$_IP" ]; then
   printf "My IP address is %s\n" "$_IP"
 fi
 
-# The two lines below work.  Trying to keep BT MAC address in script
-#rfcomm bind rfcomm0 00:06:66:BC:B2:DA
-#(sleep 10; su pi -c '~pi/bin/dataHandler.sh' > /dev/null ) & 
-
 ( '/home/pi/bin/dataHandler.sh' > /dev/null ) & 
 
 exit 0
