@@ -27,3 +27,6 @@ sudo ln -s /tmp/ttyBLE /dev/rfcomm0
 sleep 10 
 su pi -c 'python3 /home/pi/bin/dataHandler.py' 2>&1 | tee -a ~pi/data/logs/dataHandler.log
 
+# trying to figure out how to run tee as pi rather than root
+#su pi -c 'python3 /home/pi/bin/dataHandler.py' 2>&1 \| 'tee -a ~pi/data/logs/dataHandler.log'
+
