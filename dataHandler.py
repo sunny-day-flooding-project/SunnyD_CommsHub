@@ -551,7 +551,9 @@ def main():
             nchars = 0
             BT_ERROR=True
             try:        # these serial operations can raise another exception if they have not completed
-                if was_bt_err==False:
+                if(ser.isOpen() == True):
+                #if was_bt_err==False:
+                    print("Closing serial port.", flush=True)
                     ser.close()
                     time.sleep(3) # these used to be 10 s each.
                 if exists('/dev/rfcomm0'):
@@ -562,7 +564,7 @@ def main():
             data_delay_start_time = time.time()     # keep restarting the timer while bluetooth port is down
             
         if was_bt_err==False and BT_ERROR==True:
-            print("Bluetooth error, waiting for comm port.", flush=True)
+            print("Bluetooth disconnected (or other error), waiting for comm port.", flush=True)
         if was_bt_err==True and BT_ERROR==False:
             print("Comm port restored.", flush=True)
             data_delay_start_time = time.time()     # restart the timer if we have just regained bluetooth
