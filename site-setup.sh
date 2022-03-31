@@ -157,7 +157,7 @@ if [ "$doThisSection" == "y" ]; then
     read -p "Enter sensor temperature factor: " tempFactor
     read -p "Enter API password: " APIpass
     
-    sed -e s/PLACE.*=.*/"PLACE = $placeName"/ \
+    sed -e s/PLACE.*=.*/"PLACE = '$placeName'"/ \
         -e s/SITE_ID.*=.*/"SITE_ID = $siteID"/ \
         -e s/CAMERA_ID.*=.*/"CAMERA_ID = $cameraID"/ \
         -e s/SENSOR_OFFSET.*=.*/"SENSOR_OFFSET = $sensorOffset"/ \
@@ -176,6 +176,10 @@ doThisSection=${doThisSection:-"n"}
 if [ "$doThisSection" == "y" ]; then
     pushd . > /dev/null
     cd /etc/wpa_supplicant
+    echo
+    echo If there are spaces in the SSID or password, put them in quotes.
+    echo If the password is less than 8 characters or more than 63 it will have to be entered manually.
+    echo
 	read -p "Enter the SSID: " wifiSSID
 	echo Passwords will be encrypted for storage
 	read -p "Enter the password: " wifiPass
