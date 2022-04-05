@@ -196,13 +196,13 @@ def update_db_from_logged_files():
     try:
 #OLD API        rd = requests.get(url=db_url, params=get_data)
         rd = requests.get(url=db_url, params=get_data, auth=(config['dataHandler']['API_USER'], config['dataHandler']['API_PASS']))
+        print(rd.url)
+        print(rd.text)
+        j = rd.json()
     except:
         success = False
         return success
         
-    print(rd.url)
-    print(rd.text)
-    j = rd.json()
 #OLD API        lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%d %H:%M:%S")
     lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%dT%H:%M:%S+00:00")
     UTCtoEST = timedelta(hours=5)
@@ -278,13 +278,13 @@ def update_db_from_data_files():
         try:
 #OLD API            rd=requests.get(url=db_url, params=get_data, timeout=10)
             rd=requests.get(url=db_url, params=get_data, timeout=10, auth=(config['dataHandler']['API_USER'], config['dataHandler']['API_PASS']))
+            print(rd.url)
+            print(rd.text)
+            j = rd.json()
         except:
             success = False
             return prevData
             
-        print(rd.url)
-        print(rd.text)
-        j = rd.json()
 #OLD API        lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%d %H:%M:%S")
         lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%dT%H:%M:%S+00:00")
         UTCtoEST = timedelta(hours=5)
