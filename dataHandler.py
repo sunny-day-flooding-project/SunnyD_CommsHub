@@ -200,6 +200,12 @@ def update_db_from_logged_files():
         print(rd.text)
         j = rd.json()
     except:
+            print("Exception getting latest measurement during update_db_from_logged_files")
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
+            print("debug information:")
+            print(str(ss))
         success = False
         return success
         
@@ -282,6 +288,12 @@ def update_db_from_data_files():
             print(rd.text)
             j = rd.json()
         except:
+            print("Exception getting latest measurement during update_db_from_data_files")
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
+            print("debug information:")
+            print(str(ss))
             success = False
             return prevData
             
@@ -586,7 +598,10 @@ def main():
                 keepPrevData = True    # keep us from overwriting prevData
                 sleep_time = MELLOW
                 print('prevData set to: ', end='')
-                old_print(prevData.inString, end='', flush=True)
+                if not prevData.inString:
+                    old_print('(null)')
+                else:
+                    old_print(prevData.inString, end='', flush=True)
                 continue
             incomingLine = ser.read_until(b'\n')
             istr = incomingLine.decode("utf-8", "ignore")   # remove non-ascii chars
