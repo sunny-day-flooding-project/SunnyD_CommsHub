@@ -200,12 +200,12 @@ def update_db_from_logged_files():
         print(rd.text)
         j = rd.json()
     except:
-            print("Exception getting latest measurement during update_db_from_logged_files")
-            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-            message = template.format(type(ex).__name__, ex.args)
-            print(message)
-            print("debug information:")
-            print(str(ss))
+        print("Exception getting latest measurement during update_db_from_logged_files")
+        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+        message = template.format(type(ex).__name__, ex.args)
+        print(message)
+        print("debug information:")
+        print(str(ss))
         success = False
         return success
         
