@@ -84,6 +84,12 @@ do
 			#echo "is $pf > $DATE_NUM?"
 			if [ $pf -gt $DATE_NUM ]
 			then
+				echo $'Checking validity of '$picfile
+				identify $picfile
+				if [ $? -ne 0 ]; then
+					echo $'NOT a good image file.  Skipping.'
+					continue
+				fi
 				echo $'\nAdding '$pf' to database.'
 				# Push the file to the db, bail out if this fails
 
