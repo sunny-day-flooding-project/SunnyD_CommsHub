@@ -200,14 +200,17 @@ def update_db_from_logged_files():
         print(rd.text)
         j = rd.json()
     except:
-        print("Exception getting latest measurement during update_db_from_logged_files")
-        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-        message = template.format(type(ex).__name__, ex.args)
-        print(message)
-        print("debug information:")
-        print(str(ss))
-        success = False
-        return success
+        try:
+            print("Exception getting latest measurement during update_db_from_logged_files")
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
+            print("debug information:")
+            print(str(ss))
+            success = False
+            return success
+        except:
+            pass
         
 #OLD API        lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%d %H:%M:%S")
     lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%dT%H:%M:%S+00:00")
@@ -288,14 +291,17 @@ def update_db_from_data_files():
             print(rd.text)
             j = rd.json()
         except:
-            print("Exception getting latest measurement during update_db_from_data_files")
-            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-            message = template.format(type(ex).__name__, ex.args)
-            print(message)
-            print("debug information:")
-            print(str(ss))
-            success = False
-            return prevData
+            try: # suppress nested exceptions
+                print("Exception getting latest measurement during update_db_from_data_files")
+                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                message = template.format(type(ex).__name__, ex.args)
+                print(message)
+                print("debug information:")
+                print(str(ss))
+                success = False
+                return prevData
+            except:
+                pass
             
 #OLD API        lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%d %H:%M:%S")
         lastDate = datetime.strptime(j[0]["date"], "%Y-%m-%dT%H:%M:%S+00:00")
@@ -643,28 +649,40 @@ def main():
 
 # Call main if necessary
 if __name__ == "__main__":
-    config = ConfigObj("/home/pi/bin/config.ini")  # Read the config file (current directory)
-    
-    # catch some signals and perform an orderly shutdown
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGHUP, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGQUIT, signal_handler)
-    signal.signal(signal.SIGILL, signal_handler)
-    signal.signal(signal.SIGABRT, signal_handler)
-    signal.signal(signal.SIGFPE, signal_handler)
-    signal.signal(signal.SIGSEGV, signal_handler)
-    
-    device_file = '/dev/rfcomm0'
-    print('Attempting to open ' + device_file, end='')
-    while not exists(device_file):
-        old_print('.', end='')
-        time.sleep(3)
-    old_print(' ')
-        
-    ser = serial.Serial(device_file, 115200, timeout=1)
-    print('Opened: ' + ser.name, flush=True)    # just checking the name
-    time.sleep(10)
 
-    main()
-    
+    while True:
+        try:
+            config = ConfigObj("/home/pi/bin/config.ini")  # Read the config file (current directory)
+            
+            # catch some signals and perform an orderly shutdown
+            signal.signal(signal.SIGTERM, signal_handler)
+            signal.signal(signal.SIGHUP, signal_handler)
+            signal.signal(signal.SIGINT, signal_handler)
+            signal.signal(signal.SIGQUIT, signal_handler)
+            signal.signal(signal.SIGILL, signal_handler)
+            signal.signal(signal.SIGABRT, signal_handler)
+            signal.signal(signal.SIGFPE, signal_handler)
+            signal.signal(signal.SIGSEGV, signal_handler)
+            
+            device_file = '/dev/rfcomm0'
+            print('Attempting to open ' + device_file, end='')
+            while not exists(device_file):
+                old_print('.', end='')
+                time.sleep(3)
+            old_print(' ')
+                
+            ser = serial.Serial(device_file, 115200, timeout=1)
+            print('Opened: ' + ser.name, flush=True)    # just checking the name
+            time.sleep(10)
+
+            main()
+        except Exception as ex:
+            print("Unhandled exception in __main__")
+            print("Sleeping 60s and starting over.")
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
+            print("debug information:")
+            print(str(ss))
+            time.sleep(60)
+        
