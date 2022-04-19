@@ -199,14 +199,12 @@ def update_db_from_logged_files():
         print(rd.url)
         print(rd.text)
         j = rd.json()
-    except:
+    except Exception as ex:
         try:
             print("Exception getting latest measurement during update_db_from_logged_files")
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(ex).__name__, ex.args)
             print(message)
-            print("debug information:")
-            print(str(ss))
             success = False
             return success
         except:
@@ -290,14 +288,12 @@ def update_db_from_data_files():
             print(rd.url)
             print(rd.text)
             j = rd.json()
-        except:
+        except Exception as ex:
             try: # suppress nested exceptions
                 print("Exception getting latest measurement during update_db_from_data_files")
                 template = "An exception of type {0} occurred. Arguments:\n{1!r}"
                 message = template.format(type(ex).__name__, ex.args)
                 print(message)
-                print("debug information:")
-                print(str(ss))
                 success = False
                 return prevData
             except:
@@ -682,7 +678,5 @@ if __name__ == "__main__":
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(ex).__name__, ex.args)
             print(message)
-            print("debug information:")
-            print(str(ss))
             time.sleep(60)
         
