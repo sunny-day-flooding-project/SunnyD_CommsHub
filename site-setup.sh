@@ -104,7 +104,7 @@ if [ "$doThisSection" == "y" ]; then
         mv $(basename $f .off) $(basename $f .off).off
     done
     
-    cp --update --interactive *.sh *.off *.ini *.py /home/pi/bin/
+    cp --update --interactive *.sh *.off *.ini *.py *.json /home/pi/bin/
     # strip off any '.off' extensions
     for f in *.off
     do
