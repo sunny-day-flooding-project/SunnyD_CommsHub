@@ -96,7 +96,7 @@ if [ "$doThisSection" == "y" ]; then
 	echo
     echo Be careful overwriting config.ini if values have already be edited/entered.
     pushd /home/pi/SunnyD_CommsHub > /dev/null
-    git pull
+    su pi -c 'git pull'
     # if a '.off' version exists in bin, rename this version '.off' as well
 	if ls *.off 1> /dev/null 2>&1; then
 		for f in /home/pi/bin/*.off
