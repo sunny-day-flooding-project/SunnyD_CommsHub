@@ -99,21 +99,26 @@ if [ "$doThisSection" == "y" ]; then
     cd /home/pi/SunnyD_CommsHub
     git pull
     # if a '.off' version exists in bin, rename this version '.off' as well
-    for f in /home/pi/bin/*.off
-    do
-        mv $(basename $f .off) $(basename $f .off).off
-    done
+	if ls *.off 1> /dev/null 2>&1; then
+		for f in /home/pi/bin/*.off
+		do
+			mv $(basename $f .off) $(basename $f .off).off
+		done
+	fi
     
 	echo
-	echo Answer y for files that you want to copy to bin, overwriting the existing versions.
+	echo If not already up to date answer y for files that you want to copy to bin, overwriting the existing versions.
 	echo
-    cp --update --interactive *.sh *.off *.ini *.py *.json /home/pi/bin/
+    cp --update --interactive *.sh *.ini *.py *.json /home/pi/bin/
 	cp --update --interactive rc.local /etc/
-    # strip off any '.off' extensions
-    for f in *.off
-    do
-        mv $f $(basename $f .off)
-    done
+    # strip off any '.off' extensions if they exist
+	if ls *.off 1> /dev/null 2>&1; then
+        cp --update --interactive *.off /home/pi/bin/
+		for f in *.off
+		do
+			mv $f $(basename $f .off)
+		done
+	fi
     
     popd > /dev/null
 fi
