@@ -19,14 +19,13 @@
 # This section is for BLE (bluetooth low energy) devices
 # (i.e. the adafruit device, not the older Sparkfun devices)
 #
-su pi -c '/home/pi/bin/run_ble_serial.sh' &
-# the above should create /tmp/ttyBLE
-sleep 10 
-sudo ln -s /tmp/ttyBLE /dev/rfcomm0
+
+# trying these next lines in rc.local
+#su pi -c '/home/pi/bin/run_ble_serial.sh' &
+## the above should create /tmp/ttyBLE
+#sleep 10 
+#sudo ln -s /tmp/ttyBLE /dev/rfcomm0
 
 sleep 10 
-su pi -c 'python3 /home/pi/bin/dataHandler.py' 2>&1 | tee -a ~pi/data/logs/dataHandler.log
-
-# trying to figure out how to run tee as pi rather than root
-#su pi -c 'python3 /home/pi/bin/dataHandler.py' 2>&1 \| 'tee -a ~pi/data/logs/dataHandler.log'
+( python3 /home/pi/bin/dataHandler.py 2>&1 | tee -a ~pi/data/logs/dataHandler.log ) > /dev/null &
 

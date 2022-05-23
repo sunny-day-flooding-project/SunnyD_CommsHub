@@ -26,7 +26,7 @@ elif [ -f dataHandler.sh.off ]; then
 	doThisSection=${doThisSection:-"n"}
 	if [ "$doThisSection" == "y" ]; then
 		mv dataHandler.sh.off dataHandler.sh
-		(python3 /home/pi/bin/dataHandler.py 2>&1 | tee -a ~pi/data/logs/dataHandler.log) &
+		/home/pi/bin/dataHandler.sh > /dev/null &
 	fi
 fi
 

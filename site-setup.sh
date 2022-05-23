@@ -104,7 +104,11 @@ if [ "$doThisSection" == "y" ]; then
         mv $(basename $f .off) $(basename $f .off).off
     done
     
+	echo
+	echo Answer y for files that you want to copy to bin, overwriting the existing versions.
+	echo
     cp --update --interactive *.sh *.off *.ini *.py *.json /home/pi/bin/
+	cp --update --interactive rc.local /etc/
     # strip off any '.off' extensions
     for f in *.off
     do
