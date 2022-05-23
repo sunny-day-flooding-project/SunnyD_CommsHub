@@ -95,8 +95,7 @@ doThisSection=${doThisSection:-"n"}
 if [ "$doThisSection" == "y" ]; then
 	echo
     echo Be careful overwriting config.ini if values have already be edited/entered.
-    pushd . > /dev/null
-    cd /home/pi/SunnyD_CommsHub
+    pushd /home/pi/SunnyD_CommsHub > /dev/null
     git pull
     # if a '.off' version exists in bin, rename this version '.off' as well
 	if ls *.off 1> /dev/null 2>&1; then
@@ -128,8 +127,7 @@ read -n 1 -p "Would you like to add a BLE address to autoconnect? [y,N]: " doThi
 echo
 doThisSection=${doThisSection:-"n"}
 if [ "$doThisSection" == "y" ]; then
-    pushd . > /dev/null
-    cd /home/pi/bin
+    pushd /home/pi/bin > /dev/null
     
     while
         read -p "Enter the BLE address in hex separated by colons (e.g. FF:FF:...): " newBLE
@@ -156,8 +154,7 @@ read -n 1 -p "Would you like to enter config values? [y,N]: " doThisSection
 echo
 doThisSection=${doThisSection:-"n"}
 if [ "$doThisSection" == "y" ]; then
-    pushd . > /dev/null
-    cd /home/pi/bin
+    pushd /home/pi/bin > /dev/null
 
     read -p "Enter PLACE name: " placeName
     read -p "Enter SITE ID: " siteID
@@ -183,8 +180,8 @@ read -n 1 -p "Would you like to add wifi information? [y,N]: " doThisSection
 echo
 doThisSection=${doThisSection:-"n"}
 if [ "$doThisSection" == "y" ]; then
-    pushd . > /dev/null
-    cd /etc/wpa_supplicant
+    pushd /etc/wpa_supplicant > /dev/null
+
     echo
     echo If there are spaces in the SSID or password, put them in quotes.
     echo If the password is less than 8 characters or more than 63 it will have to be entered manually.
