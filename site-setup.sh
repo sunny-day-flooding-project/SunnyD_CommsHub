@@ -98,7 +98,7 @@ if [ "$doThisSection" == "y" ]; then
     pushd /home/pi/SunnyD_CommsHub > /dev/null
     su pi -c 'git pull'
     # if a '.off' version exists in bin, rename this version '.off' as well
-	if ls *.off 1> /dev/null 2>&1; then
+	if ls /home/pi/bin/*.off 1> /dev/null 2>&1; then
 		for f in /home/pi/bin/*.off
 		do
 			mv $(basename $f .off) $(basename $f .off).off
@@ -108,11 +108,11 @@ if [ "$doThisSection" == "y" ]; then
 	echo
 	echo If not already up to date answer y for files that you want to copy to bin, overwriting the existing versions.
 	echo
-    cp --update --interactive *.sh *.ini *.py *.json /home/pi/bin/
+    su pi -c "cp --update --interactive *.sh *.ini *.py *.json /home/pi/bin/"
 	cp --update --interactive rc.local /etc/
-    # strip off any '.off' extensions if they exist
+    # copy, then strip off any '.off' extensions if they exist
 	if ls *.off 1> /dev/null 2>&1; then
-        cp --update --interactive *.off /home/pi/bin/
+        su pi -c "cp --update --interactive *.off /home/pi/bin/"
 		for f in *.off
 		do
 			mv $f $(basename $f .off)
