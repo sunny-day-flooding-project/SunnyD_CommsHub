@@ -3,8 +3,7 @@
 # site-enable.sh is a script that will enable data collection and image collection
 #
 
-pushd . > /dev/null
-cd /home/pi/bin
+pushd /home/pi/bin > /dev/null
 
 # Enable/disable data collection
 if [ -f dataHandler.sh ]; then
@@ -26,7 +25,7 @@ elif [ -f dataHandler.sh.off ]; then
 	doThisSection=${doThisSection:-"n"}
 	if [ "$doThisSection" == "y" ]; then
 		mv dataHandler.sh.off dataHandler.sh
-		/home/pi/bin/dataHandler.sh > /dev/null &
+		dataHandler.sh &> /dev/null & disown;
 	fi
 fi
 
