@@ -14,7 +14,7 @@ if [ -f dataHandler.sh ]; then
 	doThisSection=${doThisSection:-"n"}
 	if [ "$doThisSection" == "y" ]; then
 		mv dataHandler.sh dataHandler.sh.off
-		sudo pkill -f dataHandler.py 
+		sudo pkill -9 -o -f dataHandler.py 
 	fi
 
 elif [ -f dataHandler.sh.off ]; then
