@@ -27,5 +27,5 @@
 #sudo ln -s /tmp/ttyBLE /dev/rfcomm0
 
 sleep 10 
-( python3 /home/pi/bin/dataHandler.py 2>&1 | tee -a ~pi/data/logs/dataHandler.log ) &> /dev/null & disown;
+( python3 /home/pi/bin/dataHandler.py 2>&1 | tee -a ~pi/data/logs/dataHandler.log ) &> /dev/null & disown -h;
 

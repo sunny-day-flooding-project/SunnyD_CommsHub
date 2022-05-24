@@ -25,7 +25,7 @@ elif [ -f dataHandler.sh.off ]; then
 	doThisSection=${doThisSection:-"n"}
 	if [ "$doThisSection" == "y" ]; then
 		mv dataHandler.sh.off dataHandler.sh
-		dataHandler.sh &> /dev/null & disown;
+		setsid dataHandler.sh &> /dev/null &
 	fi
 fi
 
