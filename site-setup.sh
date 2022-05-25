@@ -33,6 +33,36 @@ if [ "$iam" != "root" ]; then
 fi
 
 echo
+echo The software update step in this script requires a working internet connection.
+echo
+read -n 1 -p "Would you like to add wifi information? [y,N]: " doThisSection
+echo
+doThisSection=${doThisSection:-"n"}
+if [ "$doThisSection" == "y" ]; then
+    pushd /etc/wpa_supplicant > /dev/null
+
+    echo
+    echo If there are spaces in the SSID or password, put them in quotes.
+    echo If the password is less than 8 characters or more than 63 it will have to be entered manually.
+    echo
+	read -p "Enter the SSID: " wifiSSID
+	echo Passwords will be encrypted for storage
+	read -p "Enter the password: " wifiPass
+	echo
+	echo Priority values are small integers, higher numbers are higher priority.
+	echo Use 9 for top priority like cell-phone hotspots etc.
+	echo Use 5 normal connections
+	echo Use other numbers to raise or lower this connections priority.
+	read -p "Enter priority: " wifiPriority
+    
+	echo >> wpa_supplicant.conf
+	wpa_passphrase $wifiSSID $wifiPass | grep -v "#psk" >> wpa_supplicant.conf
+	sed -i s/ssid=\"$wifiSSID\"/ssid=\"$wifiSSID\"\\n\\tpriority=$wifiPriority/ wpa_supplicant.conf
+	
+    popd > /dev/null
+fi
+
+echo
 read -n 1 -p "Would you like to change the hostname? [y,N]: " doThisSection
 echo
 doThisSection=${doThisSection:-"n"}
@@ -89,6 +119,7 @@ if [ "$doThisSection" == "y" ]; then
 fi
 
 echo
+echo This step requires a working internet connection.
 read -n 1 -p "Would you like to update gateway software from the GIT repository? [y,N]: " doThisSection
 echo
 doThisSection=${doThisSection:-"n"}
@@ -174,35 +205,6 @@ if [ "$doThisSection" == "y" ]; then
 	rm tmp.tmp
     popd > /dev/null
 fi
-
-echo
-read -n 1 -p "Would you like to add wifi information? [y,N]: " doThisSection
-echo
-doThisSection=${doThisSection:-"n"}
-if [ "$doThisSection" == "y" ]; then
-    pushd /etc/wpa_supplicant > /dev/null
-
-    echo
-    echo If there are spaces in the SSID or password, put them in quotes.
-    echo If the password is less than 8 characters or more than 63 it will have to be entered manually.
-    echo
-	read -p "Enter the SSID: " wifiSSID
-	echo Passwords will be encrypted for storage
-	read -p "Enter the password: " wifiPass
-	echo
-	echo Priority values are small integers, higher numbers are higher priority.
-	echo Use 9 for top priority like cell-phone hotspots etc.
-	echo Use 5 normal connections
-	echo Use other numbers to raise or lower this connections priority.
-	read -p "Enter priority: " wifiPriority
-    
-	echo >> wpa_supplicant.conf
-	wpa_passphrase $wifiSSID $wifiPass | grep -v "#psk" >> wpa_supplicant.conf
-	sed -i s/ssid=\"$wifiSSID\"/ssid=\"$wifiSSID\"\\n\\tpriority=$wifiPriority/ wpa_supplicant.conf
-	
-    popd > /dev/null
-fi
-
 
 echo
 echo Dont forget to restart the system if you changed the host name!
