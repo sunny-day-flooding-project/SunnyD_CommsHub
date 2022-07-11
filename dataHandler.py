@@ -442,7 +442,10 @@ def download_data_files():
             time.sleep(1)
             ss.sendline('sz '+ fn)
             time.sleep(1)
-            os.system("rz --overwrite > /dev/rfcomm0 < /dev/rfcomm0")
+            result = os.system("rz --overwrite > /dev/rfcomm0 < /dev/rfcomm0")
+            # result>>8 gives the exit status pf the process.  If the file transfer fails, get out
+            if (result >> 8) != 0:
+                break
     except Exception as ex:
         print("Exception during file transfer")
         template = "An exception of type {0} occurred. Arguments:\n{1!r}"
@@ -493,20 +496,22 @@ def get_OLA_file_list(ss):
 # Procedure for exiting the zmodem menu on the OLA
 def exit_zmodem(ss):
     print("Exiting zmodem")
-    try:
-        time.sleep(1)
-        ss.sendline('x')
-        ss.expect('Menu: Main Menu')
-        time.sleep(1)
-        ss.sendline('x')
-        ser.reset_input_buffer()    # flush the rest of the menu text
-    except Exception as ex:
-        print("Exception during exit waiting for main menu")
-        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-        message = template.format(type(ex).__name__, ex.args)
-        print(message)
-        print("debug information:")
-        print(str(ss))
+    for tries in range(2):      # try twice, it's important
+        try:
+            time.sleep(1)
+            ss.sendline('x')
+            ss.expect('Menu: Main Menu')
+            time.sleep(1)
+            ss.sendline('x')
+            ser.reset_input_buffer()    # flush the rest of the menu text
+            break                       # get out of the tries loop if we succeed
+        except Exception as ex:
+            print("Exception during exit waiting for main menu")
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
+            print("debug information:")
+            print(str(ss))
 
 
 # Procedure to access OLA menu.  If called at the right time it could be quick,
@@ -667,7 +672,7 @@ if __name__ == "__main__":
                 time.sleep(3)
             old_print(' ')
                 
-            ser = serial.Serial(device_file, 115200, timeout=1)
+            ser = serial.Serial(device_file, 115200, timeout=3) # changed timeout from 1 to 3 on 20220711
             print('Opened: ' + ser.name, flush=True)    # just checking the name
             time.sleep(10)
 
