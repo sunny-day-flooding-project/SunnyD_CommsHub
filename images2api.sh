@@ -98,7 +98,7 @@ do
 #				"https://photos-sunnydayflood.apps.cloudapps.unc.edu/upload_picture?key=jjRa6S550zvTxMF&camera_ID=$CAMERA_ID&timezone=EST" \
 #				-H "accept: */*" -H "Content-Type: multipart/form-data" -F "file=@$picfile;type=image/jpeg")
 
-				ret=$(curl --max-time 30 -X POST \
+				ret=$(curl --max-time 300 -X POST \
                     "https://photos-sunnydayflood.apps.cloudapps.unc.edu/upload_picture" \
                     -F "file=@$picfile;type=image/jpeg" \
                     -F "camera_ID=$CAMERA_ID;type=*/*" \

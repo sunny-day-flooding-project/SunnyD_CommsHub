@@ -311,6 +311,8 @@ def update_db_from_data_files():
     flist = glob.glob(config['dataHandler']['DOWNLOADED_FILE_DIR']+'/dataLog?????.TXT')
     flist.sort()   # sort the file list ascending
     for fn in flist:
+        # NOTE: NEED TO HANDLE BAD CHARS IN FILE WITHOUT AN UNHANDLED EXCEPTION
+        #
         # open the file and look for the first date that is greater
         # ignoring seqNum going by date only. insert it and loop to end
         # if not, we tried, we failed.  Will have to try again
@@ -495,9 +497,9 @@ def get_OLA_file_list(ss):
 
 # Procedure for exiting the zmodem menu on the OLA
 def exit_zmodem(ss):
-    print("Exiting zmodem")
-    for tries in range(2):      # try twice, it's important
+    for tries in range(3):      # try thrice, it's important
         try:
+            print("Attempting to exit zmodem")
             time.sleep(1)
             ss.sendline('x')
             ss.expect('Menu: Main Menu')
