@@ -3,11 +3,20 @@
 # for times when some data did not go into the database for unforeseen
 # reasons.  Duplicate entries should be ignored by the database.
 #
+# Modified 8/18/22 to accept a directory name and optional config file name.
+# This is useful when updating files that were from some other gateway than the
+# one being used to run this program.  (I.E. retrieved a sensor with files that were not uploaded)
+#
+# Suggested use: Copy the files to be uploaded to their own directory somewhere.
+#                Copy the config file from the machine they came from to the same directory
+#                Set the days_ago variable below if necessary, otherwise leave it big
+#                run
+#
 # Tony Whipple
 #
 
 # Set this to the number of days before now to start pushing data
-DAYS_AGO = 1.5
+DAYS_AGO = 365
 
 import signal
 import sys
@@ -23,7 +32,6 @@ def signal_handler(sig, frame):
     print('Intercepted a signal - Stopping!', flush=True)
     sys.exit(0)
     
-
 # Class to contain the OLA data.  Attempts to parse the data.
 # If parsing fails, self.inString will be set to empty    
 class OLAdata:
@@ -37,10 +45,12 @@ class OLAdata:
             self.parseData()
 
     # If the inData look like real data populate the variables
-    # otherwise leave them uninitialized.
+    # otherwise leave them uninitialized.    
+
+#   This version of parseData is for the Bar02 sensor
     def parseData(self):
         l = self.inString.split(',')
-        if len(l)==10:     # num elements+1, split makes a token out of the trailing crlf
+        if len(l)==11:     # num elements+1, split makes a token out of the trailing crlf
             # If any exception, clear the input.  If it was a bad transmission
             # the check sequential step should catch it.
             try:
@@ -51,7 +61,8 @@ class OLAdata:
                 self.aZ = float(l[5])
                 self.temp = float(l[6])
                 self.press = float(l[7])
-                self.obsNum = int(l[8])
+                self.wtemp = float(l[8])
+                self.obsNum = int(l[9])
                 #print(vars(self))
             except:
                 self.inString = ''# Clear inString if this fails parsing
@@ -59,31 +70,32 @@ class OLAdata:
             self.inString = ''    # Clear inString if this fails parsing
             
 
+
 # write the observation to the cloud database
 def write_database(newData):
     # database access is through http "post" for example:
     # https://api-sunnydayflood.cloudapps.unc.edu/write_water_level?key=jjRa6S550zvTxMF&place=Carolina%20Beach
     #%2C%20North%20Carolina&sensor_id=CB_02&dttm=20210223050000&level=-.25&voltage=4.8&notes=test 
     #
-    db_url = config['dataHandler']['DB_URL'] + "/write_water_level"
-#    db_url = config['dataHandler']['DB_URL'] + "/bite_water_level"     # for testing, this makes the write fail
-    post_data = { 'key':config['dataHandler']['API_KEY'],
+    db_url = config['dataHandler']['DB_URL'] + "/write_measurement"
+
+    post_data = { 
                   'place':config['dataHandler']['PLACE'],
-                  'sensor_id':config['dataHandler']['SENSOR_ID'],
-                  'dttm':newData.obsDateTime.strftime('%Y%m%d%H%M%S'),
-                  'pressure':newData.press * 10.0,           # convert kPa to mBar
+                  'sensor_ID':config['dataHandler']['SITE_ID'],
+                  'date':newData.obsDateTime.astimezone().isoformat(),
+
+                  # Calibrate pressure value while writing to database
+                  'pressure':newData.press - float(config['dataHandler']['SENSOR_OFFSET']) - (float(config['dataHandler']['SENSOR_TEMP_FACTOR']) * newData.wtemp),
                   'voltage':newData.battVolts,
                   'seqNum':newData.obsNum,
                   'aX':newData.aX,
                   'aY':newData.aY,
                   'aZ':newData.aZ,
+                  'wtemp':newData.wtemp,
                   'notes':" " }
-    xdata = urllib.parse.urlencode(post_data, quote_via=urllib.parse.quote)
 
     try:
-        r=requests.post(url=db_url, params=xdata, timeout=10)
-#        print(r.url)
-#        print(r.text)
+        r=requests.post(url=db_url, json=post_data, timeout=10, auth=(config['dataHandler']['API_USER'], config['dataHandler']['API_PASS']))
         r.raise_for_status()    # throw an exception if the status is bad
         success = True
     except Exception as ex:
@@ -113,7 +125,7 @@ def update_db_from_data_files():
     print(lastDate)
 
     # get a list of data files - since the dates in them are unknown, have to open them all
-    flist = glob.glob(config['dataHandler']['DOWNLOADED_FILE_DIR']+'/dataLog?????.TXT')
+    flist = glob.glob(updateFileDir+'/dataLog?????.TXT')
     flist.sort()   # sort the file list ascending
     for fn in flist:
         # open the file and look for the first date that is greater
@@ -149,7 +161,16 @@ def main():
     update_db_from_data_files()
 
 if __name__ == "__main__":
-    config = ConfigObj("/home/pi/bin/config.ini")  # Read the config file (current directory)
+    if len(sys.argv) == 1:
+        print("Usage " + sys.argv[0] + " fileDirectory optionalConfigFile")
+        print("  if config file is omitted, uses default config file in ~/bin")
+        exit()
+    if len(sys.argv) > 1:
+        updateFileDir = sys.argv[1]
+    if len(sys.argv) > 2:
+        config = ConfigObj(sys.argv[2])
+    else:
+        config = ConfigObj("/home/pi/bin/config.ini")  # Read the config file (current directory)
     
     # catch some signals and perform an orderly shutdown
     signal.signal(signal.SIGTERM, signal_handler)
