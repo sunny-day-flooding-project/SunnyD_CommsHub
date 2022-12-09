@@ -77,6 +77,8 @@ def write_database(newData):
     # https://api-sunnydayflood.cloudapps.unc.edu/write_water_level?key=jjRa6S550zvTxMF&place=Carolina%20Beach
     #%2C%20North%20Carolina&sensor_id=CB_02&dttm=20210223050000&level=-.25&voltage=4.8&notes=test 
     #
+    numTries=0  #number of tries to post
+    MAX_TRIES = 2
     db_url = config['dataHandler']['DB_URL'] + "/write_measurement"
 
     post_data = { 
@@ -94,19 +96,25 @@ def write_database(newData):
                   'wtemp':newData.wtemp,
                   'notes':" " }
 
-    try:
-        r=requests.post(url=db_url, json=post_data, timeout=10, auth=(config['dataHandler']['API_USER'], config['dataHandler']['API_PASS']))
-        r.raise_for_status()    # throw an exception if the status is bad
-        success = True
-    except Exception as ex:
-        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-        message = template.format(type(ex).__name__, ex.args)
-        print(message)
-        # In order to resync the database, check to see if the next sequence number is in the data files,
-        # if so try to put it in after the next observation.  If not, we might need to get the data files
-        # and use date to keep up-to-date
-        print("Exception posting to database.  Database out of sync.")
-        success = False
+    while numTries < MAX_TRIES:
+        try:
+            r=requests.post(url=db_url, json=post_data, timeout=10, auth=(config['dataHandler']['API_USER'], config['dataHandler']['API_PASS']))
+            r.raise_for_status()    # throw an exception if the status is bad
+            success = True
+            break
+        except Exception as ex:
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
+            # In order to resync the database, check to see if the next sequence number is in the data files,
+            # if so try to put it in after the next observation.  If not, we might need to get the data files
+            # and use date to keep up-to-date
+            print("Exception posting to database.  Database out of sync.")
+            success = False
+            numTries = numTries + 1
+            if numTries < MAX_TRIES:
+                print("Trying to post another time")
+        
     return success
 
 
