@@ -12,6 +12,9 @@
 #                Set the days_ago variable below if necessary, otherwise leave it big
 #                run
 #
+#   "Usage " + sys.argv[0] + " fileDirectory optionalConfigFile"
+#   if config file is omitted, uses default config file in ~/bin
+#
 # Tony Whipple
 #
 
