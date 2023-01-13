@@ -109,6 +109,61 @@ class OLAdata:
             self.inString = ''    # Clear inString if this fails parsing
             
 
+# Checks that the observation time that we just received is within range of the system time
+# and resets the clock if necessary.
+def check_clock(newData, ss):
+    CLOCK_THRESHOLD = timedelta(seconds=10)
+    
+    if abs(datetime.now() - newData.obsDateTime) > CLOCK_THRESHOLD:
+        # reset the clock
+        print("Data time does not match system time.  Resetting OLA clock.")
+        if get_OLA_menu(ss)==False:
+            print("Failed to get OLA menu.  Will try again later.")
+            return    # failed to get menu 
+        try:
+            # use send() or sendline()
+            ss.send('2')
+            ss.expect('Configure Time Stamp', timeout=5)
+            ss.expect('Exit', timeout=5)
+            time.sleep(1)
+            ss.sendline('4')
+            ss.expect('year', timeout=5)
+            ss.sendline(time.strftime("%y", time.localtime()))
+            ss.expect('month', timeout=5)
+            ss.sendline(time.strftime("%m", time.localtime()))
+            ss.expect('day', timeout=5)
+            ss.sendline(time.strftime("%d", time.localtime()))
+            ss.expect('Configure Time Stamp', timeout=5)
+            ss.expect('Exit', timeout=5)
+            time.sleep(1)
+            ss.sendline('6')
+            ss.expect('hour', timeout=5)
+            ss.sendline(time.strftime("%H", time.localtime()))
+            ss.expect('minute', timeout=5)
+            ss.sendline(time.strftime("%M", time.localtime()))
+            ss.expect('second', timeout=5)
+            ss.sendline(time.strftime("%S", time.localtime()))
+            ss.expect('Configure Time Stamp', timeout=5)
+            ss.expect('1\)', timeout=5)
+            print( ss.before.decode("utf-8").strip() )
+            ss.expect('Exit', timeout=5)
+            time.sleep(1)
+            ss.send('x')
+            ss.expect('Main Menu', timeout=5)
+            time.sleep(1)
+            ss.send('x')
+        except Exception as ex:
+            print("Exception setting OLA clock")
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
+            print("debug information:")
+            print(str(ss))
+            exit_zmodem(ss)
+            return prevData
+    
+    return
+             
 # returns true or false whether this value is sequential with the last
 def check_sequential(newData, prevData):
     # Check if the new data is sequential with the previous data
@@ -130,6 +185,8 @@ def write_local_file(newData):
 # write the observation to the cloud database
 def write_database(newData):
     no_logging = config['dataHandler']['DB_URL'].lower().startswith('no')   # if operating without a database
+    numTries=0  #number of tries to post
+    MAX_TRIES = 2
     
     if no_logging == True:
         success=True
@@ -158,22 +215,28 @@ def write_database(newData):
                       'notes':" " }
 #OLD API        xdata = urllib.parse.urlencode(post_data, quote_via=urllib.parse.quote)
 
-        try:
-#OLD API            r=requests.post(url=db_url, params=xdata, timeout=10)
-            r=requests.post(url=db_url, json=post_data, timeout=10, auth=(config['dataHandler']['API_USER'], config['dataHandler']['API_PASS']))
-            #old_print(r.url)
-            #old_print(r.text)
-            r.raise_for_status()    # throw an exception if the status is bad
-            success = True
-        except Exception as ex:
-            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-            message = template.format(type(ex).__name__, ex.args)
-            print(message)
-            # In order to resync the database, check to see if the next sequence number is in the data files,
-            # if so try to put it in after the next observation.  If not, we might need to get the data files
-            # and use date to keep up-to-date
-            print("Exception posting to database.  Database out of sync.")
-            success = False
+        while numTries < MAX_TRIES:
+            try:
+    #OLD API            r=requests.post(url=db_url, params=xdata, timeout=10)
+                r=requests.post(url=db_url, json=post_data, timeout=10, auth=(config['dataHandler']['API_USER'], config['dataHandler']['API_PASS']))
+                #old_print(r.url)
+                #old_print(r.text)
+                r.raise_for_status()    # throw an exception if the status is bad
+                success = True
+                break
+            except Exception as ex:
+                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                message = template.format(type(ex).__name__, ex.args)
+                print(message)
+                # In order to resync the database, check to see if the next sequence number is in the data files,
+                # if so try to put it in after the next observation.  If not, we might need to get the data files
+                # and use date to keep up-to-date
+                print("Exception posting to database.  Database out of sync.")
+                success = False
+                numTries = numTries + 1
+                if numTries < MAX_TRIES:
+                    print("Trying to post another time")
+              
     return success
 
 
@@ -344,7 +407,7 @@ def update_db_from_data_files():
 
 
 # Command sequence to access the OLA and download the necessary data files.
-def download_data_files():
+def download_data_files(ss):
 # Download any data files from the OLA that we dont have or are a different size
 # returns the most recent observation
 #
@@ -364,10 +427,7 @@ def download_data_files():
 
     prevData = OLAdata('')
     fileDir = config['dataHandler']['DOWNLOADED_FILE_DIR']
-    
-    ss = fdpexpect.fdspawn(ser, maxread=65536)    # set up to use ss with pexpect
-    #ss.logfile = sys.stdout
-    
+        
     # Errors in the transmission of the OLA file list are costly. Try up to 5 times to get 
     # two identical copies in a row before we call it a good transmission.
     if get_OLA_menu(ss)==False:
@@ -562,6 +622,8 @@ def main():
     data_delay_start_time = time.time() # time how long since data in case we are stuck in the file transfer menu
     MAX_DATA_DELAY = config['dataHandler']['MAX_DATA_DELAY']
     no_logging = config['dataHandler']['DB_URL'].lower().startswith('no')
+    ss = fdpexpect.fdspawn(ser, maxread=65536)    # set up to use ss with pexpect
+    #ss.logfile = sys.stdout.buffer     # enable this line to see the output (python3)
         
     while True:
         try:
@@ -601,7 +663,7 @@ def main():
         if nchars > 0:
             data_delay_start_time = time.time() # we received something so reset the timer
             if want_file_download == True:
-                prevData = download_data_files()
+                prevData = download_data_files(ss)
                 data_delay_start_time = time.time() # this could have taken a long time
                 want_file_download = False
                 keepPrevData = True    # keep us from overwriting prevData
@@ -612,7 +674,14 @@ def main():
                 else:
                     old_print(prevData.inString, end='', flush=True)
                 continue
-            incomingLine = ser.read_until(b'\n')
+            try:
+                incomingLine = ser.read_until(b'\n')
+            except Exception as ex:
+                print("Exception reading serial data.  Continuing.")
+                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                message = template.format(type(ex).__name__, ex.args)
+                print(message)
+                continue
             istr = incomingLine.decode("utf-8", "ignore")   # remove non-ascii chars
             incomingLine = istr.encode("ascii", "ignore")
             if len(incomingLine)==0:   # line was only garbage
@@ -628,6 +697,7 @@ def main():
                 continue    # don't sleep if we have a lot of lines to get rid of
             else:
                 keepPrevData = False
+                check_clock(newData, ss)    # just received this - clock should be current
                 if check_sequential(newData, prevData)==False:
                     print('Sequence number not sequential. Downloading data files to catch up.', flush=True)
                     want_file_download = True
@@ -645,8 +715,6 @@ def main():
         # no chars
         time.sleep(sleep_time)
         if time.time() - data_delay_start_time > float(MAX_DATA_DELAY):
-            ss = fdpexpect.fdspawn(ser, maxread=65536)    # set up to use ss with pexpect
-            #ss.logfile = sys.stdout
             exit_zmodem(ss)
             data_delay_start_time = time.time()
 
