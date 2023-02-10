@@ -85,7 +85,7 @@ do
 			if [ $pf -gt $DATE_NUM ]
 			then
 				echo $'Checking validity of '$picfile
-				identify $picfile
+				identify -regard-warnings $picfile
 				if [ $? -ne 0 ]; then
 					echo $'NOT a good image file.  Skipping.'
 					continue
