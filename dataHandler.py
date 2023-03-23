@@ -205,6 +205,7 @@ def write_database(newData):
                       'date':newData.obsDateTime.astimezone().isoformat(),
 
                       # Calibrate pressure value while writing to database
+                      'raw_pressure':newData.press,
                       'pressure':newData.press - float(config['dataHandler']['SENSOR_OFFSET']) - (float(config['dataHandler']['SENSOR_TEMP_FACTOR']) * newData.wtemp),
                       'voltage':newData.battVolts,
                       'seqNum':newData.obsNum,
