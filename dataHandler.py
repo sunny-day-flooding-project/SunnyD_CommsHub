@@ -505,7 +505,8 @@ def download_data_files(ss):
             time.sleep(1)
             ss.sendline('sz '+ fn)
             time.sleep(1)
-            result = os.system("rz --overwrite > /dev/rfcomm0 < /dev/rfcomm0")
+            #result = os.system("rz --overwrite > /dev/rfcomm0 < /dev/rfcomm0")
+            result = os.system("rz -r -U > /dev/rfcomm0 < /dev/rfcomm0")
             # result>>8 gives the exit status pf the process.  If the file transfer fails, get out
             if (result >> 8) != 0:
                 break
