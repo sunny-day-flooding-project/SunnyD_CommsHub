@@ -24,7 +24,7 @@ else
 		mogrify -pointsize 100 -fill white -undercolor '#00000080' -gravity North -annotate +0+5 "`date`" $PIC_DIR$TODAY/$TODAY$HM.jpg
 	else
 		timeout -s 2 60s libcamera-still --tuning-file /home/pi/bin/imx477.json --framerate 0 -o $PIC_DIR$TODAY/$TODAY$HM.jpg --metering average --exposure long -q 30 -t 20000 --width 2028 --height 1520
-		mogrify -rotate 270 $PIC_DIR$TODAY/$TODAY$HM.jpg
+		#mogrify -rotate 270 $PIC_DIR$TODAY/$TODAY$HM.jpg
 		mogrify -pointsize 50 -fill white -undercolor '#00000080' -gravity North -annotate +0+5 "`date`" $PIC_DIR$TODAY/$TODAY$HM.jpg
 	fi
 fi
