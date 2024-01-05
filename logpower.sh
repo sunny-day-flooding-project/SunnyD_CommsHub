@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+#set -x
 
 thedate=`date`
 thevoltage=`/usr/local/bin/lifepo4wered-cli read vin`
