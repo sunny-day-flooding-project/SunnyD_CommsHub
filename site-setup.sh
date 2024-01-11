@@ -176,7 +176,9 @@ dev = $newBLE
 read-uuid = 6e400003-b5a3-f393-e0a9-e50e24dcca9e 
 write-uuid = 6e400002-b5a3-f393-e0a9-e50e24dcca9e
 "    >> /home/pi/bin/autoconnect.ini
-    
+    # now restart the process that uses them
+	pkill -f "python3 /home/pi/bin/ble-autoconnect.py -c /home/pi/bin/autoconnect.ini"
+	python3 /home/pi/bin/ble-autoconnect.py -c /home/pi/bin/autoconnect.ini 2>&1 | tee -a ~pi/data/logs/ble-serial.log > /dev/null &
     popd > /dev/null
 fi
 
