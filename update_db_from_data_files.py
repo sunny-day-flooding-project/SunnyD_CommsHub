@@ -175,6 +175,7 @@ def main():
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         print("Usage " + sys.argv[0] + " fileDirectory optionalConfigFile")
+        print("Looks in fileDirectory for files matching dataLog?????.TXT")
         print("  if config file is omitted, uses default config file in ~/bin")
         exit()
     if len(sys.argv) > 1:
