@@ -3,6 +3,18 @@ set -x
 
 PIC_DIR="/home/pi/webcam/"
 
+LATITUDE=`confget -f /home/pi/bin/config.ini LATITUDE`
+if [[ -z "$LATITUDE" ]]
+then
+	LATITUDE='35N'
+fi
+
+LONGITUDE=`confget -f /home/pi/bin/config.ini LONGITUDE`
+if [[ -z "$LONGITUDE" ]]
+then
+	LONGITUDE='77W'
+fi
+
 TODAY=`date +%Y%m%d`
 if [ ! -d "$PIC_DIR$TODAY" ]; then
     mkdir "$PIC_DIR$TODAY"
@@ -17,7 +29,7 @@ HM=$(date +"_%H%M")
 # takes a long time to converge.
 METERING='average'
 CAM_TIME=20000
-DAY_OR_NIGHT=`/home/pi/bin/sunwait poll 35N 77W`
+DAY_OR_NIGHT=`/home/pi/bin/sunwait poll $LATITUDE $LONGITUDE`
 if [ "$DAY_OR_NIGHT" == "NIGHT" ]; then
 	METERING='spot'
 	CAM_TIME=240000
