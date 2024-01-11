@@ -139,8 +139,8 @@ if [ "$doThisSection" == "y" ]; then
 	echo
 	echo If not already up to date answer y for files that you want to copy to bin, overwriting the existing versions.
 	echo
-    su pi -c "cp --update --interactive *.sh *.ini *.py *.json /home/pi/bin/"
-	cp --update --interactive rc.local /etc/
+    su pi -c "cp --update --interactive *.sh *.ini *.py *.json sunwait /home/pi/bin/"
+	cp --update --interactive rc.local msmtprc /etc/
     # copy, then strip off any '.off' extensions if they exist
 	if ls *.off 1> /dev/null 2>&1; then
         su pi -c "cp --update --interactive *.off /home/pi/bin/"
