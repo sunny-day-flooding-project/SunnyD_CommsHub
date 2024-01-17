@@ -161,6 +161,7 @@ if [ "$doThisSection" == "y" ]; then
     pushd /home/pi/bin > /dev/null
     
     while
+        echo Be careful not to duplicate entries as they are not allowed.
         read -p "Enter the BLE address in hex separated by colons (e.g. FF:FF:...): " newBLE
         echo
         echo You entered $newBLE
