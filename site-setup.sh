@@ -225,3 +225,5 @@ echo database before sending data.
 echo https://api-sunnydayflood.apps.cloudapps.unc.edu/docs#/ for write_survey and write_measurement
 echo https://photos-sunnydayflood.apps.cloudapps.unc.edu/docs#/ for write_camera and upload_picture
 echo
+read -p "Press enter to continue..."
+
