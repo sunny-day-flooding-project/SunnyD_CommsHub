@@ -194,6 +194,11 @@ if [ "$doThisSection" == "y" ]; then
     read -p "Enter PLACE name: " placeName
     read -p "Enter SITE ID: " siteID
     read -p "Enter CAMERA ID: " cameraID
+	read -p "Enter alert message email addresses (semi-colon separated): " alertRecip
+	echo "Lat/Lon can be approximate and are used to determine sunrise and sunset times."
+	echo "Enter in floating-point degrees, with [NESW] appended."
+	read -p "Enter approximate site latitude: " siteLat
+	read -p "Enter approximate site longitude: " siteLon
     read -p "Enter sensor calibration offset: " sensorOffset
     read -p "Enter sensor temperature factor: " tempFactor
     read -p "Enter API password: " APIpass
@@ -201,6 +206,9 @@ if [ "$doThisSection" == "y" ]; then
     sed -e s/PLACE.*=.*/"PLACE = '$placeName'"/ \
         -e s/SITE_ID.*=.*/"SITE_ID = $siteID"/ \
         -e s/CAMERA_ID.*=.*/"CAMERA_ID = $cameraID"/ \
+        -e s/ALERT_RECIPIENTS.*=.*/"ALERT_RECIPIENTS = $alertRecip"/ \
+        -e s/LATITUDE.*=.*/"LATITUDE = $siteLat"/ \
+        -e s/LONGITUDE.*=.*/"LONGITUDE = $siteLon"/ \
         -e s/SENSOR_OFFSET.*=.*/"SENSOR_OFFSET = $sensorOffset"/ \
         -e s/SENSOR_TEMP_FACTOR.*=.*/"SENSOR_TEMP_FACTOR = $tempFactor"/ \
         -e s/API_PASS.*=.*/"API_PASS = $APIpass"/ \
@@ -212,4 +220,8 @@ fi
 
 echo
 echo Dont forget to restart the system if you changed the host name!
+echo Also, an initial survey and initial observations need to be written to the
+echo database before sending data.
+echo https://api-sunnydayflood.apps.cloudapps.unc.edu/docs#/ for write_survey and write_measurement
+echo https://photos-sunnydayflood.apps.cloudapps.unc.edu/docs#/ for write_camera and upload_picture
 echo
