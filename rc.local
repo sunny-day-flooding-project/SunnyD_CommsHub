@@ -21,6 +21,8 @@ if [ "$_IP" ]; then
   printf "My IP address is %s\n" "$_IP"
 fi
 
+/home/pi/bin/watch_wlan0.sh &
+
 su pi -c '/home/pi/bin/run_ble_serial.sh' &
 sleep 10
 ln -s /tmp/ttyBLE /dev/rfcomm0
