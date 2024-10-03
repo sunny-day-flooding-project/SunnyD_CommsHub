@@ -22,11 +22,13 @@ import sys
 import requests
 import urllib
 import os
+import re
 from os.path import exists
 import glob
 from datetime import datetime
 from datetime import timedelta
 from configobj import ConfigObj
+import traceback
 
 # override print so each statement is timestamped
 old_print = print
@@ -375,29 +377,39 @@ def update_db_from_data_files():
     flist = glob.glob(config['dataHandler']['DOWNLOADED_FILE_DIR']+'/dataLog?????.TXT')
     flist.sort()   # sort the file list ascending
     for fn in flist:
-        # NOTE: NEED TO HANDLE BAD CHARS IN FILE WITHOUT AN UNHANDLED EXCEPTION
-        #
         # open the file and look for the first date that is greater
         # ignoring seqNum going by date only. insert it and loop to end
         # if not, we tried, we failed.  Will have to try again
         f = open(fn, "rt")
-        for fline in f:
-            fdata = OLAdata(fline.encode("ascii", "ignore"))
-            if fdata.inString != '':    # if the line fails parsing we will skip it.
-                if fdata.obsDateTime > (lastDate+one_second):
-                    if no_logging or write_database(fdata) == True:
-                        lastDate = fdata.obsDateTime
-                        prevData = fdata
-                        success = True
-                        print('Successfully wrote: ', end='')
-                        old_print(fdata.inString, end='', flush=True)
+        while True: 	# a loop that we can break out of so that fline can be within the try
+            try:
+                fline = f.readline()
+                if not fline: # EOF
+                    break
+                
+                fdata = OLAdata(fline.encode("ascii", "ignore"))           
+                if fdata.inString != '':    # if the line fails parsing we will skip it.
+                    if fdata.obsDateTime > (lastDate+one_second):
+                        if no_logging or write_database(fdata) == True:
+                            lastDate = fdata.obsDateTime
+                            prevData = fdata
+                            success = True
+                            print('Successfully wrote: ', end='')
+                            old_print(fdata.inString, end='', flush=True)
+                        else:
+                            success = False
+                            f.close()
+                            print("\nWrite database failed.  Failed attempt to catch database up from downloaded data files.")
+                            return prevData   # if we fail, get out and try again later
                     else:
                         success = False
-                        f.close()
-                        print("\nWrite database failed.  Failed attempt to catch database up from downloaded data files.")
-                        return prevData   # if we fail, get out and try again later
-                else:
-                    success = False
+            except UnicodeDecodeError as ex:
+                print("Unicode decoding error: ", ex)
+                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                message = template.format(type(ex).__name__, ex.args)
+                print(message)
+                continue	# to the next line
+                        
         f.close()
             
     if success == True:
@@ -520,6 +532,12 @@ def download_data_files(ss):
         print(ss.before)
         return prevData
         
+    # At this point ola_fdict2 still has the complete copy of files.  Delete files
+    # with numbers less than the (current filenum)-(MAX_FILES_ON_OLA).  This is conservative
+    # and may leave files such as the edge case where there are file numbers larger than the 
+    # current file.  Those cases should be dealt with by hand.
+    delete_excess_OLA_files(ss, ola_fdict2, flist[-1])
+    
     # update the database with the new data and set prevData to most recent
     prevData = update_db_from_data_files()
     # would be better if we could exit zmodem before the previous step, but doing
@@ -555,6 +573,48 @@ def get_OLA_file_list(ss):
         return fileDict
     
     return fileDict
+
+
+# Delete files with numbers less than the (current filenum)-(MAX_FILES_ON_OLA).
+def delete_excess_OLA_files(ss, ola_fdict_full, current_file):
+    delThroughFn = subtract_from_filename(current_file, config['dataHandler']['MAX_FILES_ON_OLA'])
+
+    if delThroughFn != "fnError":
+        for fn in ola_fdict_full:
+            if fn <= delThroughFn:
+                try:
+                    print("Deleting OLA file " + fn)
+                    ss.sendline('del ' + fn)
+                    ss.expect('deleted', timeout=10)
+                    time.sleep(1)
+                except Exception as ex:
+                    print("Exception while deleting old OLA files")
+                    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                    message = template.format(type(ex).__name__, ex.args)
+                    print(message)
+                    print("debug information:")
+                    print(str(ss))   
+    return  # no return value - either it worked or we will try again next time
+
+
+# Subtracts a number from a filename containing a number,
+# If something doesn't go right, return "fnError"
+def subtract_from_filename(filename, amount):
+    # Extract the number from the filename using regular expressions
+    match = re.search(r'\d+', filename)
+    if match:
+        number = int(match.group())
+        numLen = len(match.group())
+        new_number = number - int(amount)
+
+        # Replace the old number with the new one
+        if new_number < 0:
+            new_filename = "fnError"
+        else:
+            new_filename = re.sub(r'\d+', str(new_number).zfill(5), filename)
+    else:
+        new_filename = "fnError"
+    return new_filename
 
 
 # Procedure for exiting the zmodem menu on the OLA
@@ -608,8 +668,33 @@ def get_OLA_menu(ss):
     print("Found Main Menu")
     time.sleep(1)
     return True
-        
 
+# Attempt to reboot the OLA
+def reboot_OLA(ss):
+    if get_OLA_menu(ss):
+        try:
+            time.sleep(1)		# This first "d" is in case the input buffer is off by 1 character
+                                # which is a bug that is known to happen.
+            ss.sendline('d')
+            print("Attempting reboot OLA")
+            time.sleep(1)
+            ss.sendline('d')
+            ss.expect('Debug Settings')
+            print("Entering into debug menu")
+            time.sleep(1)
+            ss.sendline('5')	# don't wait for a response here, we might be out of sync
+            time.sleep(1)
+            ss.sendline('y')
+            # the port will disappear at this point so we need to just go back and wait
+        except Exception as ex:
+            print("Exception while attempting to reboot the OLA")
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
+            print("debug information:")
+            print(str(ss))
+            
+            
 def main():
     newData = OLAdata('')       # initialize empty
     prevData= OLAdata('')
@@ -626,7 +711,8 @@ def main():
     no_logging = config['dataHandler']['DB_URL'].lower().startswith('no')
     ss = fdpexpect.fdspawn(ser, maxread=65536)    # set up to use ss with pexpect
     #ss.logfile = sys.stdout.buffer     # enable this line to see the output (python3)
-        
+    firstTime = True
+    
     while True:
         try:
             nchars = ser.in_waiting
@@ -654,6 +740,16 @@ def main():
             print("Comm port restored.", flush=True)
             data_delay_start_time = time.time()     # restart the timer if we have just regained bluetooth
         was_bt_err = BT_ERROR
+        
+        if firstTime:
+            # The first thing we will try to do is reboot the OLA.  This is just for stability
+            # in case something goes bad in the software over time. (For example the error where
+            # the input buffer gets out of sync by 1 character.)
+            reboot_OLA(ss)
+            time.sleep(3)	# let the OLA reboot
+            # after reboot the port may briefly disappear.
+            firstTime = False
+        
         
         # If we need the menu, we have to be fast.  Sleep time will be set to minimum, and as soon
         # as we see the first character show up, we try sending a char.  Maybe,
@@ -755,5 +851,6 @@ if __name__ == "__main__":
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(ex).__name__, ex.args)
             print(message)
+            print(traceback.format_exc())
             time.sleep(60)
         
