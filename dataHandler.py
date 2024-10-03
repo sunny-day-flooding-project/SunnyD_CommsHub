@@ -583,7 +583,7 @@ def delete_excess_OLA_files(ss, ola_fdict_full, current_file):
         for fn in ola_fdict_full:
             if fn <= delThroughFn:
                 try:
-                    print("Deleting OLA file " + fn)
+                    print("Deleting OLA file " + fn, flush=True)
                     ss.sendline('del ' + fn)
                     ss.expect('deleted', timeout=10)
                     time.sleep(1)
