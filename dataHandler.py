@@ -490,6 +490,8 @@ def download_data_files(ss):
         # Remove the files we already have from the ola file list
         if fn in ola_fdict.keys() and sz == ola_fdict.get(fn):
             ola_fdict.pop(fn, None)
+        else:
+            ola_fdict2.pop(fn, None)    # This will contain the list of files that we do have downloaded
             
     # If the ola_fdict (list of files to download) has any filenames (numbers)
     # remaining less than the latest local file,
@@ -532,7 +534,7 @@ def download_data_files(ss):
         print(ss.before)
         return prevData
         
-    # At this point ola_fdict2 still has the complete copy of files.  Delete files
+    # At this point ola_fdict2 has the files that are already downloaded.  Delete files
     # with numbers less than the (current filenum)-(MAX_FILES_ON_OLA).  This is conservative
     # and may leave files such as the edge case where there are file numbers larger than the 
     # current file.  Those cases should be dealt with by hand.
@@ -576,11 +578,11 @@ def get_OLA_file_list(ss):
 
 
 # Delete files with numbers less than the (current filenum)-(MAX_FILES_ON_OLA).
-def delete_excess_OLA_files(ss, ola_fdict_full, current_file):
+def delete_excess_OLA_files(ss, ola_fdict_candidates, current_file):
     delThroughFn = subtract_from_filename(current_file, config['dataHandler']['MAX_FILES_ON_OLA'])
 
     if delThroughFn != "fnError":
-        for fn in ola_fdict_full:
+        for fn in ola_fdict_candidates:
             if fn <= delThroughFn:
                 try:
                     print("Deleting OLA file " + fn, flush=True)
@@ -684,7 +686,8 @@ def reboot_OLA(ss):
             time.sleep(1)
             ss.sendline('5')	# don't wait for a response here, we might be out of sync
             time.sleep(1)
-            ss.sendline('y')
+            ss.sendline('y')    # Since this is sendline and not just send, the extra cr will handle 
+                                # an input buffer offset.
             # the port will disappear at this point so we need to just go back and wait
         except Exception as ex:
             print("Exception while attempting to reboot the OLA")
