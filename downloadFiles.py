@@ -228,13 +228,18 @@ def exit_zmodem(ss):
 # Procedure to access OLA menu.  If called at the right time it could be quick,
 # otherwise it will hammer on the OLA until it wakes up for the next observation.
 def get_OLA_menu(ss):
+    count=0
     ss.sendline(' ')    # before print to be fast
     print("Attempting to open main menu")
     found=1    # will become 0 when found
     while found==1:
+        if count > 40:
+            ss.sendline('x')    # in case we need to drop out of the sd card menu
+            count=0
         try:
             ss.sendline(' ')
             found=ss.expect(['Menu: Main Menu', pexpect.TIMEOUT], timeout=0.3)
+            count=count+1
         except pexpect.exceptions.EOF as e:
             print("Caught EOF error - waiting for port to re-appear")
             ser.close()
