@@ -52,10 +52,16 @@ else
 		timeout -s 2 320s libcamera-still --tuning-file /home/pi/bin/imx477.json --framerate 0 -o $PIC_DIR$TODAY/$TODAY$HMS.jpg --metering $METERING --exposure long -q 30 -t $CAM_TIME --post-process-file /home/pi/bin/drc.json
 		mogrify -rotate $CAMERA_ROTATION $PIC_DIR$TODAY/$TODAY$HMS.jpg
 		mogrify -pointsize 100 -fill white -undercolor '#00000080' -gravity North -annotate +0+5 "`date`" $PIC_DIR$TODAY/$TODAY$HMS.jpg
+		convert  $PIC_DIR$TODAY/$TODAY$HMS.jpg -thumbnail '160x120>' temp_thumbnail.jpg
+		exiftool -overwrite_original "-ThumbnailImage<=temp_thumbnail.jpg" $PIC_DIR$TODAY/$TODAY$HMS.jpg
+		rm temp_thumbnail.jpg
 	else
 		timeout -s 2 320s libcamera-still --tuning-file /home/pi/bin/imx477.json --framerate 0 -o $PIC_DIR$TODAY/$TODAY$HMS.jpg --metering $METERING --exposure long -q 30 -t $CAM_TIME --width 2028 --height 1520
 		mogrify -rotate $CAMERA_ROTATION $PIC_DIR$TODAY/$TODAY$HMS.jpg
 		mogrify -pointsize 50 -fill white -undercolor '#00000080' -gravity North -annotate +0+5 "`date`" $PIC_DIR$TODAY/$TODAY$HMS.jpg
+		convert  $PIC_DIR$TODAY/$TODAY$HMS.jpg -thumbnail '160x120>' temp_thumbnail.jpg
+		exiftool -overwrite_original "-ThumbnailImage<=temp_thumbnail.jpg" $PIC_DIR$TODAY/$TODAY$HMS.jpg
+		rm temp_thumbnail.jpg
 	fi
 fi
 
