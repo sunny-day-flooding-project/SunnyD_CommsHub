@@ -259,7 +259,7 @@ def get_OLA_menu(ss):
         old_print(".", end='', flush=True)
     print("Found Main Menu")
     time.sleep(1)
-    return True            
+    return True
             
 def main():
     newData = OLAdata('')       # initialize empty
