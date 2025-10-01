@@ -112,9 +112,12 @@ read -n 1 -p "Would you like to set up the UPS hardware (only needs to be done o
 echo
 doThisSection=${doThisSection:-"n"}
 if [ "$doThisSection" == "y" ]; then
-    lifepo4wered-cli set auto_boot 3
-    lifepo4wered-cli set auto_shdn_time 60
-    lifepo4wered-cli set cfg_write 0x46
+    lifepo4wered-cli set AUTO_BOOT 3
+    lifepo4wered-cli set AUTO_SHDN_TIME 60
+	lifepo4wered-cli set WATCHDOG_GRACE 600
+	lifepo4wered-cli set WATCHDOG_TIMER 600
+	lifepo4wered-cli set WATCHDOG_CFG 2
+    lifepo4wered-cli set CFG_WRITE 0x46
     echo Done.
 fi
 
