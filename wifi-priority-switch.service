@@ -1,0 +1,9 @@
+[Unit]
+Description=Wi-Fi Priority Switch Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wifi-priority-switch.sh
+

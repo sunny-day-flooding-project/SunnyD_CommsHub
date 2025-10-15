@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Site Enable
+Exec=lxterminal --geometry=110x35 -e "sudo /home/pi/bin/site-enable.sh"
+Icon=utilities-terminal
+Terminal=true

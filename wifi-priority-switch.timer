@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Wi-Fi Priority Switch every 30 seconds
+
+[Timer]
+OnBootSec=30sec
+OnUnitActiveSec=30sec
+Unit=wifi-priority-switch.service
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

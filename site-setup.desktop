@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Site Setup
+Exec=lxterminal --geometry=110x35 -e "sudo /home/pi/bin/site-setup.sh"
+Icon=utilities-terminal
+Terminal=true
