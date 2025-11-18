@@ -146,7 +146,8 @@ def check_clock(newData, ss):
             ss.expect('second', timeout=5)
             ss.sendline(time.strftime("%S", time.localtime()))
             ss.expect('Configure Time Stamp', timeout=5)
-            ss.expect('1\)', timeout=5)
+#            ss.expect('1\)', timeout=5)    # The latest python is flagging the \ , not sure if this is new or?
+            ss.expect(r'\1)', timeout=5)
             print( ss.before.decode("utf-8").strip() )
             ss.expect('Exit', timeout=5)
             time.sleep(1)
@@ -519,7 +520,6 @@ def download_data_files(ss):
             time.sleep(1)
             ss.sendline('sz '+ fn)
             time.sleep(1)
-            #result = os.system("rz --overwrite > /dev/rfcomm0 < /dev/rfcomm0")
             result = os.system("rz -r -U > /dev/rfcomm0 < /dev/rfcomm0")
             # result>>8 gives the exit status pf the process.  If the file transfer fails, get out
             if (result >> 8) != 0:
@@ -644,14 +644,17 @@ def exit_zmodem(ss):
 # otherwise it will hammer on the OLA until it wakes up for the next observation.
 def get_OLA_menu(ss):
     count=0
-    ss.sendline(' ')    # before print to be fast
+    try:
+        ss.sendline(' ')    # before print to be fast
+    except Exception:       # and handle any exceptions below
+        pass
     print("Attempting to open main menu")
     found=1    # will become 0 when found
     while found==1:
-        if count > 40:
-            ss.sendline('x')    # in case we need to drop out of the sd card menu
-            count=0
         try:
+            if count > 40:
+                ss.sendline('x')    # in case we need to drop out of the sd card menu
+                count=0
             ss.sendline(' ')
             found=ss.expect(['Menu: Main Menu', pexpect.TIMEOUT], timeout=0.3)
             count=count+1
