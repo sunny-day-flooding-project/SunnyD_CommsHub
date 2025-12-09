@@ -166,51 +166,6 @@ if [ "$doThisSection" == "y" ]; then
 fi
 
 echo
-read -n 1 -p "Would you like to change the hostname? [y,N]: " doThisSection
-echo
-doThisSection=${doThisSection:-"n"}
-if [ "$doThisSection" == "y" ]; then
-
-    # change the site name
-    read -p "Enter the new gateway/host name (ex. GW99): " NEW_SITE_NAME
-    echo
-    echo This gateway will be set to \"$NEW_SITE_NAME\".
-
-    read -n 1 -p "Continue? [y,N] " toContinue
-    toContinue=${toContinue:-"n"}
-    if [ "$toContinue" != "y" ]; then
-        echo "Exiting script"
-        exit 1
-    fi
-    echo
-
-    OLD_SITE_NAME=`hostname`    # save the current name of this box
-    echo Changing hostname in files /etc/hostname and /etc/hosts from $OLD_SITE_NAME to $NEW_SITE_NAME
-
-    echo $NEW_SITE_NAME > /etc/hostname
-    hostname $NEW_SITE_NAME
-
-    # Put in temp file and display with y/n option in case of substitution errors
-    sed s/$OLD_SITE_NAME/$NEW_SITE_NAME/g < /etc/hosts > /home/pi/bin/hosts.tmp
-    echo
-    echo Check that there were no substitution errors.
-    echo
-    cat /home/pi/bin/hosts.tmp
-    echo
-    read -n 1 -p "Does this look correct? [y,N] " isCorrect
-    echo
-    isCorrect=${isCorrect:-"n"}
-    if [ "$isCorrect" != "y" ]; then
-        echo Leaving this version as /home/pi/bin/hosts.tmp - not modifying original
-        echo Edit original correctly or re-run script when this finishes.
-    else
-        cp /home/pi/bin/hosts.tmp /etc/hosts
-        rm /home/pi/bin/hosts.tmp
-        echo NOTE that the name change wont take effect until reboot.
-    fi
-fi
-
-echo
 read -n 1 -p "Would you like to set up the UPS hardware (only needs to be done once)? [y,N]: " doThisSection
 echo
 doThisSection=${doThisSection:-"n"}
@@ -255,6 +210,7 @@ if [ "$doThisSection" == "y" ]; then
 			mv $f $(basename $f .off)
 		done
 	fi
+	chmod +x /home/pi/bin/*.sh /home/pi/bin/*.sh.off /home/pi/bin/sunwait
     
     popd > /dev/null
 fi
@@ -305,6 +261,7 @@ if [ "$doThisSection" == "y" ]; then
 	echo "Enter in floating-point degrees, with [NESW] appended."
 	read -p "Enter approximate site latitude: " siteLat
 	read -p "Enter approximate site longitude: " siteLon
+	read -p "Enter camera rotation in degrees: " camRot
     read -p "Enter sensor calibration offset: " sensorOffset
     read -p "Enter sensor temperature factor: " tempFactor
     read -p "Enter API password: " APIpass
@@ -315,6 +272,7 @@ if [ "$doThisSection" == "y" ]; then
         -e s/ALERT_RECIPIENTS.*=.*/"ALERT_RECIPIENTS = $alertRecip"/ \
         -e s/LATITUDE.*=.*/"LATITUDE = $siteLat"/ \
         -e s/LONGITUDE.*=.*/"LONGITUDE = $siteLon"/ \
+		-e s/CAMERA_ROTATION.*=.*/"CAMERA_ROTATION = $camRot"/ \
         -e s/SENSOR_OFFSET.*=.*/"SENSOR_OFFSET = $sensorOffset"/ \
         -e s/SENSOR_TEMP_FACTOR.*=.*/"SENSOR_TEMP_FACTOR = $tempFactor"/ \
         -e s/API_PASS.*=.*/"API_PASS = $APIpass"/ \
@@ -323,6 +281,72 @@ if [ "$doThisSection" == "y" ]; then
 	rm tmp.tmp
     popd > /dev/null
 fi
+
+
+echo
+read -n 1 -p "Would you like to change the hostname? [y,N]: " doThisSection
+echo
+doThisSection=${doThisSection:-"n"}
+if [ "$doThisSection" == "y" ]; then
+
+    # change the site name
+    read -p "Enter the new gateway/host name (ex. GW99): " NEW_SITE_NAME
+    echo
+    echo This gateway will be set to \"$NEW_SITE_NAME\".
+
+    read -n 1 -p "Continue? [y,N] " toContinue
+    toContinue=${toContinue:-"n"}
+    if [ "$toContinue" != "y" ]; then
+        echo "Exiting script"
+        exit 1
+    fi
+    echo
+
+    OLD_SITE_NAME=`hostname`    # save the current name of this box
+    echo Changing hostname in files /etc/hostname and /etc/hosts from $OLD_SITE_NAME to $NEW_SITE_NAME
+
+    echo $NEW_SITE_NAME > /etc/hostname
+    hostname $NEW_SITE_NAME
+
+    # Put in temp file and display with y/n option in case of substitution errors
+    sed s/$OLD_SITE_NAME/$NEW_SITE_NAME/g < /etc/hosts > /home/pi/bin/hosts.tmp
+    echo
+    echo Check that there were no substitution errors.
+    echo
+    cat /home/pi/bin/hosts.tmp
+    echo
+    read -n 1 -p "Does this look correct? [y,N] " isCorrect
+    echo
+    isCorrect=${isCorrect:-"n"}
+    if [ "$isCorrect" != "y" ]; then
+        echo Leaving this version as /home/pi/bin/hosts.tmp - not modifying original
+        echo Edit original correctly or re-run script when this finishes.
+    else
+        cp /home/pi/bin/hosts.tmp /etc/hosts
+        rm /home/pi/bin/hosts.tmp
+        echo NOTE that the name change wont take effect until reboot.
+    fi
+fi
+
+
+echo
+read -n 1 -p "Would you like to remove the current VNC ID (this will disconnect and render a remote session impossible) [y,N]: " doThisSection
+echo
+doThisSection=${doThisSection:-"n"}
+if [ "$doThisSection" == "y" ]; then
+	echo "Stopping VNC service..."
+	systemctl stop vncserver-x11-serviced
+
+	echo "Removing VNC identity (Cloud ID & keys)..."
+	rm -rf /root/.vnc
+
+	echo "Starting VNC service..."
+	systemctl start vncserver-x11-serviced
+
+	echo "Identity removed"
+	echo "Reconnect through the user interface."
+fi
+
 
 echo
 echo Dont forget to restart the system if you changed the host name!
