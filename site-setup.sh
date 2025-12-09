@@ -136,6 +136,9 @@ echo '   Config information:'
 echo '      Place Name'
 echo '      Site ID'
 echo '      Camera ID'
+echo '      Alert recipient email addresses'
+echo '      Approximate Lattitude and Longitude'
+echo '      Camera rotation in degrees'
 echo '      Sensor calibration offset'
 echo '      Sensor calibration temperature factor'
 echo '      API password'
@@ -330,7 +333,8 @@ fi
 
 
 echo
-read -n 1 -p "Would you like to remove the current VNC ID (this will disconnect and render a remote session impossible) [y,N]: " doThisSection
+echo This will disconnect a remote session until VNC is re-licensed.
+read -n 1 -p "Would you like to remove the current VNC ID [y,N]: " doThisSection
 echo
 doThisSection=${doThisSection:-"n"}
 if [ "$doThisSection" == "y" ]; then
