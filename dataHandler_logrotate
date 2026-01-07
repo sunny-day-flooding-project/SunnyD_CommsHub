@@ -1,11 +1,24 @@
 /home/pi/data/logs/*.log
 {
-        su pi pi
-		rotate 52
-        weekly
-        missingok
-        notifempty
-        delaycompress
-        compress
-        copytruncate
+	su pi pi
+	rotate 52
+	weekly
+	missingok
+	notifempty
+	delaycompress
+	compress
+	copytruncate
+	
+	!/home/pi/data/logs/ble-serial.log
+}
+
+/home/pi/data/logs/ble-serial.log {
+    su pi pi
+    rotate 7
+    daily
+    missingok
+    notifempty
+    delaycompress
+    compress
+    copytruncate
 }
