@@ -538,7 +538,8 @@ def download_data_files(ss):
     # with numbers less than the (current filenum)-(MAX_FILES_ON_OLA).  This is conservative
     # and may leave files such as the edge case where there are file numbers larger than the 
     # current file.  Those cases should be dealt with by hand.
-    delete_excess_OLA_files(ss, ola_fdict2, flist[-1])
+    if flist:
+        delete_excess_OLA_files(ss, ola_fdict2, flist[-1])
     
     # update the database with the new data and set prevData to most recent
     prevData = update_db_from_data_files()
@@ -664,7 +665,7 @@ def get_OLA_menu(ss):
             ser.close()
             while not exists('/dev/rfcomm0'):
                 time.sleep(3)
-            ser.open()
+            ss = reconnect()
             time.sleep(1)
             continue
         except Exception as ex:
@@ -705,7 +706,11 @@ def reboot_OLA(ss):
             print(message)
             print("debug information:")
             print(str(ss))
-            
+
+# we have to call fdspawn each time the port is opened
+def reconnect():
+    ser.open()
+    return fdpexpect.fdspawn(ser, maxread=65536)            
             
 def main():
     newData = OLAdata('')       # initialize empty
@@ -740,7 +745,7 @@ def main():
                     ser.close()
                     time.sleep(3) # these used to be 10 s each.
                 if exists('/dev/rfcomm0'):
-                    ser.open()
+                    ss=reconnect()
                     time.sleep(3)
             except:
                 time.sleep(3)
@@ -758,9 +763,10 @@ def main():
             # in case something goes bad in the software over time. (For example the error where
             # the input buffer gets out of sync by 1 character.)
             reboot_OLA(ss)
-            time.sleep(3)	# let the OLA reboot
+            #time.sleep(2)	# let the OLA reboot
             # after reboot the port may briefly disappear.
             firstTime = False
+            continue    # Start the loop over and wait for port to re-appear
         
         
         # If we need the menu, we have to be fast.  Sleep time will be set to minimum, and as soon
