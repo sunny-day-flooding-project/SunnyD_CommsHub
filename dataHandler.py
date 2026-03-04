@@ -661,6 +661,7 @@ def get_OLA_menu(ss):
             count=count+1
             
         except pexpect.exceptions.EOF as e:
+            old_print(".", flush=True)
             print("Caught EOF error - waiting for port to re-appear")
             ser.close()
             while not exists('/dev/rfcomm0'):
@@ -669,6 +670,7 @@ def get_OLA_menu(ss):
             time.sleep(1)
             continue
         except Exception as ex:
+            old_print(".", flush=True)
             print("Exception waiting for main menu")
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(ex).__name__, ex.args)
@@ -677,6 +679,7 @@ def get_OLA_menu(ss):
             print(str(ss))
             return False  # if we get an exception we are done
         old_print(".", end='', flush=True)
+    old_print(".", flush=True)
     print("Found Main Menu")
     time.sleep(1)
     return True
