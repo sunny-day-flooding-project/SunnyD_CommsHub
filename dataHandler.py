@@ -355,6 +355,12 @@ def update_db_from_data_files():
             print(rd.url)
             print(rd.text)
             j = rd.json()
+            if j == [None]:
+                print(" ")
+                print("Server did not find a latest measurement for " + config['dataHandler']['SITE_ID'])
+                print("Could not update database.")
+                print(" ")
+                return prevData
         except Exception as ex:
             try: # suppress nested exceptions
                 print("Exception getting latest measurement during update_db_from_data_files")
