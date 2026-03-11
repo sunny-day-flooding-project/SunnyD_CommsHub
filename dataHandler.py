@@ -790,13 +790,14 @@ def main():
             if want_file_download == True:
                 prevData = download_data_files(ss)
                 data_delay_start_time = time.time() # this could have taken a long time
-                want_file_download = False
                 keepPrevData = True    # keep us from overwriting prevData
                 sleep_time = MELLOW
                 print('prevData set to: ', end='')
                 if not prevData.inString:
+                    want_file_download = True
                     old_print('(null)')
                 else:
+                    want_file_download = False
                     old_print(prevData.inString, end='', flush=True)
                 continue
             try:
