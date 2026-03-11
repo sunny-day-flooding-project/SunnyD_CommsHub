@@ -1,0 +1,129 @@
+import logging
+import asyncio
+import os
+from bleak.exc import BleakError
+from ble_serial import platform_uart as UART
+from ble_serial.ports.tcp_socket import TCP_Socket
+from ble_serial.log.fs_log import FS_log, Direction
+from ble_serial.log.console_log import setup_logger
+from ble_serial import cli
+
+class Main():
+    def __init__(self, args: cli.Namespace):
+        self.args = args
+
+        if args.gap_role == 'client':
+            from ble_serial.bluetooth.ble_client import BLE_client as BLE
+        elif args.gap_role == 'server':
+            from ble_serial.bluetooth.ble_server import BLE_server as BLE
+        self.BLE_class = BLE
+
+    def start(self):
+        try:
+            logging.debug(f'Running: {self.args}')
+            asyncio.run(self._run())
+
+        # KeyboardInterrupt causes bluetooth to disconnect, but still a exception would be printed here
+        except KeyboardInterrupt as e:
+            logging.debug('Exit due to KeyboardInterrupt')
+
+    async def _run(self):
+        args = self.args
+        loop = asyncio.get_event_loop()
+        loop.set_exception_handler(self.excp_handler)
+        try:
+            if args.tcp_port:
+                self.uart = TCP_Socket(args.tcp_host, args.tcp_port, args.mtu)
+            else:
+                # Remove stale symlink if present
+                if args.port and os.path.exists(args.port):
+                    try:
+                        os.unlink(args.port)
+                        logging.warning(f"Removed stale symlink {args.port}")
+                    except Exception as e:
+                        logging.error(f"Failed to remove stale symlink {args.port}: {e}")
+                self.uart = UART(args.port, loop, args.mtu)
+
+            self.bt = self.BLE_class(args.adapter, args.gap_name)
+
+            if args.filename:
+                self.log = FS_log(args.filename, args.binlog)
+                self.bt.set_receiver(self.log.middleware(Direction.BLE_IN, self.uart.queue_write))
+                self.uart.set_receiver(self.log.middleware(Direction.BLE_OUT, self.bt.queue_send))
+            else:
+                self.bt.set_receiver(self.uart.queue_write)
+                self.uart.set_receiver(self.bt.queue_send)
+
+            self.uart.start()
+            
+            if args.gap_role == 'client':
+                connected = await self.bt.connect(args.device, args.addr_type, args.service_uuid, args.timeout)
+                if not connected:
+                    logging.error("Bluetooth connection failed")
+                    await self.bt.disconnect()
+                    raise SystemExit(1)
+                setup_ok = await self.bt.setup_chars(args.write_uuid, args.read_uuid, args.mode, args.write_with_response)
+                if not setup_ok:
+                    logging.error("Bluetooth setup failed")
+                    await self.bt.disconnect()
+                    raise SystemExit(1)
+            elif args.gap_role == 'server':
+                await self.bt.setup_chars(args.service_uuid, args.write_uuid, args.read_uuid, args.mode, args.write_with_response)
+                await self.bt.start(args.timeout)
+
+            logging.info('Running main loop!')
+            main_tasks = {
+                asyncio.create_task(self.bt.send_loop()),
+                asyncio.create_task(self.bt.check_loop()),
+                asyncio.create_task(self.uart.run_loop())
+            }
+            done, pending = await asyncio.wait(main_tasks, return_when=asyncio.FIRST_COMPLETED)
+            logging.debug(f'Completed Tasks: {[(t._coro, t.result()) for t in done]}')
+            logging.debug(f'Pending Tasks: {[t._coro for t in pending]}')
+        except BleakError as e:
+            logging.error('Bluetooth connection failed')
+            logging.exception(e)
+            if hasattr(self, 'bt'):
+                await self.bt.disconnect()
+            raise SystemExit(1)
+        except Exception as e:
+            logging.exception(e)
+            if hasattr(self, 'bt'):
+                await self.bt.disconnect()
+            raise SystemExit(1)
+        finally:
+            logging.warning('Shutdown initiated')
+            # Python 3.12+ requires all tasks to be cancelled and awaited
+            pending = [
+                t for t in asyncio.all_tasks()
+                if t is not asyncio.current_task()
+            ]
+            for task in pending:
+                task.cancel()
+            try:
+                await asyncio.gather(*pending, return_exceptions=True)
+            except Exception:
+                pass
+            if hasattr(self, 'bt'):
+                await self.bt.disconnect()
+            if hasattr(self, 'uart'):
+                self.uart.remove()
+            if hasattr(self, 'log'):
+                self.log.finish()
+            logging.info('Shutdown complete.')    
+
+
+    def excp_handler(self, loop: asyncio.AbstractEventLoop, context):
+        # Handles exception from other tasks (inside bleak disconnect, etc)
+        # loop.default_exception_handler(context)
+        logging.debug(f'Asyncio execption handler called {context["exception"]}')
+        logging.exception(context["exception"])
+
+        self.uart.stop_loop()
+        self.bt.stop_loop()
+
+def launch():
+    print("=== BLE-SERIAL: MODIFIED VERSION RUNNING ===", flush=True)
+    args = cli.parse_args()
+    setup_logger(args.verbose, args.gap_role, args.gap_name)
+    Main(args).start()
