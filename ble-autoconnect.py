@@ -22,6 +22,8 @@ import sys
 import os
 from bleak import BleakScanner
 from bleak.backends.device import BLEDevice
+import time
+from bleak.backends.bluezdbus.manager import get_global_bluez_manager
 
 
 # ---------- Configuration and CLI ----------
@@ -79,53 +81,79 @@ scanner: BleakScanner = None
 global_scan_lock = asyncio.Lock()       # serialize stop/start of the scanner
 per_device_locks = {}                   # address -> asyncio.Lock()
 shutdown_event = asyncio.Event()
+last_adv_time = time.time()
 
 
 # ---------- Utility functions ----------
 async def run_soft_hci_reset():
     logging.info("Attempting soft HCI reset (hciconfig reset preferred)")
 
-    # 1) Try quick hciconfig reset (fast; may not exist on some systems)
+    # 1) Try quick hciconfig reset
     try:
-        p = await asyncio.create_subprocess_exec('sudo', '/usr/bin/hciconfig', 'hci0', 'reset',
-                                                 stdout=asyncio.subprocess.PIPE,
-                                                 stderr=asyncio.subprocess.PIPE)
+        p = await asyncio.create_subprocess_exec(
+            'sudo', '/usr/bin/hciconfig', 'hci0', 'reset',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
         try:
             out, err = await asyncio.wait_for(p.communicate(), timeout=5)
         except asyncio.TimeoutError:
             logging.warning("hciconfig reset timed out")
-            p.kill()
+            try:
+                p.kill()
+            except ProcessLookupError:
+                logging.debug("hciconfig process already exited before kill()")
+            except Exception:
+                logging.exception("hciconfig kill() raised")
             await p.wait()
-            out, err = b'', b'timeout'
+            out, err = b"", b"timeout"
         if p.returncode == 0:
             logging.info("hciconfig reset succeeded")
             await asyncio.sleep(0.5)
             return True
-        logging.debug("hciconfig reset rc=%s stdout=%s stderr=%s", p.returncode,
-                      out.decode(errors='ignore')[:300], err.decode(errors='ignore')[:300])
+        logging.debug(
+            "hciconfig reset rc=%s stdout=%s stderr=%s",
+            p.returncode,
+            out.decode(errors='ignore')[:300],
+            err.decode(errors='ignore')[:300],
+        )
     except FileNotFoundError:
         logging.debug("hciconfig not found; skipping")
     except Exception:
         logging.exception("hciconfig reset raised")
 
-    # 2) Fall back to btmgmt power off/on sequence (each run with its own timeout)
+    # 2) Fall back to btmgmt power off/on
     cmd_off = ['sudo', 'btmgmt', '-i', 'hci0', 'power', 'off']
     cmd_on  = ['sudo', 'btmgmt', '-i', 'hci0', 'power', 'on']
 
     # power off
     try:
-        p_off = await asyncio.create_subprocess_exec(*cmd_off,
-                                                     stdout=asyncio.subprocess.PIPE,
-                                                     stderr=asyncio.subprocess.PIPE)
+        p_off = await asyncio.create_subprocess_exec(
+            *cmd_off,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
         try:
             out_off, err_off = await asyncio.wait_for(p_off.communicate(), timeout=5)
         except asyncio.TimeoutError:
             logging.warning("btmgmt power off timed out; killing")
-            p_off.kill()
+            try:
+                p_off.kill()
+            except ProcessLookupError:
+                logging.debug("btmgmt power off process already exited before kill()")
+            except Exception:
+                logging.exception("btmgmt power off kill() raised")
             await p_off.wait()
-            out_off, err_off = b'', b'timeout'
-        logging.debug("btmgmt off rc=%s stdout=%s stderr=%s", p_off.returncode,
-                      out_off.decode(errors='ignore')[:400], err_off.decode(errors='ignore')[:400])
+            out_off, err_off = b"", b"timeout"
+        logging.debug(
+            "btmgmt off rc=%s stdout=%s stderr=%s",
+            p_off.returncode,
+            out_off.decode(errors='ignore')[:400],
+            err_off.decode(errors='ignore')[:400],
+        )
+        if p_off.returncode not in (0,):
+            logging.warning("btmgmt power off returned non-zero")
+            return False
     except FileNotFoundError:
         logging.error("btmgmt not present on system; cannot soft reset")
         return False
@@ -133,24 +161,33 @@ async def run_soft_hci_reset():
         logging.exception("btmgmt power off failed")
         return False
 
-    # small settle
     await asyncio.sleep(0.6)
 
     # power on
     try:
-        p_on = await asyncio.create_subprocess_exec(*cmd_on,
-                                                    stdout=asyncio.subprocess.PIPE,
-                                                    stderr=asyncio.subprocess.PIPE)
+        p_on = await asyncio.create_subprocess_exec(
+            *cmd_on,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
         try:
             out_on, err_on = await asyncio.wait_for(p_on.communicate(), timeout=6)
         except asyncio.TimeoutError:
             logging.warning("btmgmt power on timed out; killing")
-            p_on.kill()
+            try:
+                p_on.kill()
+            except ProcessLookupError:
+                logging.debug("btmgmt power on process already exited before kill()")
+            except Exception:
+                logging.exception("btmgmt power on kill() raised")
             await p_on.wait()
-            out_on, err_on = b'', b'timeout'
-        logging.debug("btmgmt on rc=%s stdout=%s stderr=%s", p_on.returncode,
-                      out_on.decode(errors='ignore')[:400], err_on.decode(errors='ignore')[:400])
-
+            out_on, err_on = b"", b"timeout"
+        logging.debug(
+            "btmgmt on rc=%s stdout=%s stderr=%s",
+            p_on.returncode,
+            out_on.decode(errors='ignore')[:400],
+            err_on.decode(errors='ignore')[:400],
+        )
         if p_on.returncode == 0:
             logging.info("btmgmt power on succeeded")
             await asyncio.sleep(0.6)
@@ -162,6 +199,7 @@ async def run_soft_hci_reset():
         logging.exception("btmgmt power on failed")
         return False
 
+
 async def safe_scanner_stop():
     """Stop the bleak scanner, with a fallback soft reset if stop fails."""
     try:
@@ -169,12 +207,19 @@ async def safe_scanner_stop():
         logging.debug("scanner.stop() succeeded")
         return True
     except Exception as e:
+        # Special case: BlueZ says "No discovery started" -> scanner already stopped
+        from bleak.exc import BleakDBusError
+
+        if isinstance(e, BleakDBusError) and "No discovery started" in str(e):
+            logging.debug("scanner.stop(): already stopped (No discovery started)")
+            return True
+
         logging.exception("scanner.stop() failed: %s", e)
         # try a soft reset and consider that the fallback
         await run_soft_hci_reset()
         # attempt to continue; caller may choose to restart scanner
         return False
-
+        
 async def safe_scanner_start():
     """Start the bleak scanner, with soft-reset fallback if start fails."""
     try:
@@ -202,6 +247,32 @@ def create_or_get_lock(addr: str) -> asyncio.Lock:
         per_device_locks[addr] = lock
     return lock
 
+async def scanner_watchdog():
+    global last_adv_time
+
+    while not shutdown_event.is_set():
+        await asyncio.sleep(10)
+
+        try:
+            # If no advertisements for 360 seconds, scanner may be dead
+            if time.time() - last_adv_time > 360:
+                logging.warning("No advertisements seen for 360s — checking scanner health")
+
+                async with global_scan_lock:
+                    # Try a soft restart of the scanner
+                    await safe_scanner_stop()
+                    await asyncio.sleep(0.5)
+                    ok = await safe_scanner_start()
+
+                if not ok:
+                    logging.error("Scanner restart failed — attempting soft HCI reset")
+                    async with global_scan_lock:
+                        await run_soft_hci_reset()
+                        await asyncio.sleep(0.5)
+                        await safe_scanner_start()
+
+        except Exception:
+            logging.exception("Exception in scanner_watchdog loop")
 
 # ---------- Core runner ----------
 async def run_tool(conf_section: dict, lock_id: str):
@@ -289,6 +360,9 @@ async def run_tool(conf_section: dict, lock_id: str):
 
 # ---------- Detection callback ----------
 def detection_callback(device: BLEDevice, adv_data):
+    global last_adv_time
+    last_adv_time = time.time()
+
     logging.debug(f'{device.address} = {adv_data.local_name} (RSSI: {adv_data.rssi}) Services={adv_data.service_uuids}')
     try:
         if device.address in config:
@@ -342,6 +416,7 @@ async def main():
         return
 
     logging.info("Scanner started; monitoring for configured devices")
+    asyncio.create_task(scanner_watchdog())
 
     # wait until shutdown_event is set
     await shutdown_event.wait()
