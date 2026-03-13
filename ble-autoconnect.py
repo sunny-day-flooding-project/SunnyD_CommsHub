@@ -285,17 +285,17 @@ async def run_tool(conf_section: dict, lock_id: str):
 
     lock = create_or_get_lock(lock_id)
     if lock.locked():
-        logging.debug("Device %s already has an active run; ignoring", lock_id)
+        #logging.debug("Device %s already has an active run; ignoring", lock_id)
         return
 
     async with lock:
         logging.info("Preparing to run tool for %s", lock_id)
-        # Stop scanner under global lock so no overlapping stop/start operations occur
-        async with global_scan_lock:
-            logging.debug("Acquired global scan lock to stop scanner")
-            await safe_scanner_stop()
-            # give BlueZ a small settle time for resource cleanup
-            await asyncio.sleep(0.75)
+        # # Stop scanner under global lock so no overlapping stop/start operations occur
+        # async with global_scan_lock:
+            # logging.debug("Acquired global scan lock to stop scanner")
+            # await safe_scanner_stop()
+            # # give BlueZ a small settle time for resource cleanup
+            # await asyncio.sleep(0.75)
 
         # Build params: keep same semantics as original script
         params = [executable]
@@ -333,37 +333,36 @@ async def run_tool(conf_section: dict, lock_id: str):
                 logging.info("Tool finished for %s with return code %s", lock_id, rc)
 
         finally:
-            # if child returned non-zero, attempt a soft HCI reset to clear leaked state
+            need_start = False
             if rc is None:
-                # if process creation failed, attempt reset as well
                 logging.warning("Child didn't start properly; attempting soft HCI reset")
                 try:
                     await run_soft_hci_reset()
+                    need_start = True
                 except Exception:
                     logging.exception("run_soft_hci_reset() raised")
             elif rc != 0:
                 logging.warning("Child exited with non-zero; attempting soft HCI reset")
                 try:
                     await run_soft_hci_reset()
+                    need_start = True
                 except Exception:
                     logging.exception("run_soft_hci_reset() raised")
 
-            # small settle before restarting the scanner
-            await asyncio.sleep(0.8)
-
-            # Ensure scanner is restarted; do this under the global lock too
-            async with global_scan_lock:
-                logging.debug("Acquired global scan lock to restart scanner")
-                started = await safe_scanner_start()
-                if not started:
-                    logging.error("Failed to restart scanner after handling child; scanner may be non-functional")
-
+            if need_start:
+                # Restart scanner immediately after reset
+                async with global_scan_lock:
+                    await asyncio.sleep(0.5)
+                    ok = await safe_scanner_start()
+                    if not ok:
+                        logging.error("Scanner failed to start after soft reset")
+            
 # ---------- Detection callback ----------
 def detection_callback(device: BLEDevice, adv_data):
     global last_adv_time
     last_adv_time = time.time()
 
-    logging.debug(f'{device.address} = {adv_data.local_name} (RSSI: {adv_data.rssi}) Services={adv_data.service_uuids}')
+    #logging.debug(f'{device.address} = {adv_data.local_name} (RSSI: {adv_data.rssi}) Services={adv_data.service_uuids}')
     try:
         if device.address in config:
             section = config[device.address]
