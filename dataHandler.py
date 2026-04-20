@@ -392,6 +392,7 @@ def update_db_from_data_files():
             try:
                 fline = f.readline()
                 if not fline: # EOF
+                    success = True  # if we hit EOF, we have read all the files even if no data to send
                     break
                 
                 fdata = OLAdata(fline.encode("ascii", "ignore"))           

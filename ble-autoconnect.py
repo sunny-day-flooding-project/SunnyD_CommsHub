@@ -247,19 +247,31 @@ def create_or_get_lock(addr: str) -> asyncio.Lock:
         per_device_locks[addr] = lock
     return lock
 
+
 async def scanner_watchdog():
     global last_adv_time
+
+    last_logged_hour = None  # track last hour we logged
 
     while not shutdown_event.is_set():
         await asyncio.sleep(10)
 
         try:
+            now = time.time()
+            lt = time.localtime(now)
+
+            # --- Hourly wall-clock heartbeat ---
+            if lt.tm_min == 0 and lt.tm_hour != last_logged_hour:
+                hour_12 = lt.tm_hour % 12 or 12
+                am_pm = "AM" if lt.tm_hour < 12 else "PM"
+                logging.info(f"{hour_12} o'clock {am_pm} and all is well")
+                last_logged_hour = lt.tm_hour
+
             # If no advertisements for 360 seconds, scanner may be dead
-            if time.time() - last_adv_time > 360:
+            if now - last_adv_time > 360:
                 logging.warning("No advertisements seen for 360s — checking scanner health")
 
                 async with global_scan_lock:
-                    # Try a soft restart of the scanner
                     await safe_scanner_stop()
                     await asyncio.sleep(0.5)
                     ok = await safe_scanner_start()
@@ -273,6 +285,7 @@ async def scanner_watchdog():
 
         except Exception:
             logging.exception("Exception in scanner_watchdog loop")
+            
 
 # ---------- Core runner ----------
 async def run_tool(conf_section: dict, lock_id: str):
