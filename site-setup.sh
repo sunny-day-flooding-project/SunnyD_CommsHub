@@ -257,7 +257,7 @@ doThisSection=${doThisSection:-"n"}
 if [ "$doThisSection" == "y" ]; then
     pushd /home/pi/bin > /dev/null
 
-	echo "Hit Enter (only) to leave value unchanged."
+    echo "Hit Enter (only) to leave value unchanged."
     read -p "Enter PLACE name: " placeName
     read -p "Enter SITE ID: " siteID
     read -p "Enter CAMERA ID: " cameraID
@@ -273,17 +273,17 @@ if [ "$doThisSection" == "y" ]; then
 
     # Build sed command dynamically
     sedCmd=()
-
-    [[ -n "$placeName"    ]] && sedCmd+=(-e "s/^PLACE *=.*/PLACE = '$placeName'/")
-    [[ -n "$siteID"       ]] && sedCmd+=(-e "s/^SITE_ID *=.*/SITE_ID = $siteID/")
-    [[ -n "$cameraID"     ]] && sedCmd+=(-e "s/^CAMERA_ID *=.*/CAMERA_ID = $cameraID/")
-    [[ -n "$alertRecip"   ]] && sedCmd+=(-e "s/^ALERT_RECIPIENTS *=.*/ALERT_RECIPIENTS = $alertRecip/")
-    [[ -n "$siteLat"      ]] && sedCmd+=(-e "s/^LATITUDE *=.*/LATITUDE = $siteLat/")
-    [[ -n "$siteLon"      ]] && sedCmd+=(-e "s/^LONGITUDE *=.*/LONGITUDE = $siteLon/")
-    [[ -n "$camRot"       ]] && sedCmd+=(-e "s/^CAMERA_ROTATION *=.*/CAMERA_ROTATION = $camRot/")
-    [[ -n "$sensorOffset" ]] && sedCmd+=(-e "s/^SENSOR_OFFSET *=.*/SENSOR_OFFSET = $sensorOffset/")
-    [[ -n "$tempFactor"   ]] && sedCmd+=(-e "s/^SENSOR_TEMP_FACTOR *=.*/SENSOR_TEMP_FACTOR = $tempFactor/")
-    [[ -n "$APIpass"      ]] && sedCmd+=(-e "s/^API_PASS *=.*/API_PASS = $APIpass/")
+    
+    [[ -n "$placeName"    ]] && sedCmd+=(-e "s/^\(.*PLACE *=\).*/\1 '$placeName'/")
+    [[ -n "$siteID"       ]] && sedCmd+=(-e "s/^\(.*SITE_ID *=\).*/\1 $siteID/")
+    [[ -n "$cameraID"     ]] && sedCmd+=(-e "s/^\(.*CAMERA_ID *=\).*/\1 $cameraID/")
+    [[ -n "$alertRecip"   ]] && sedCmd+=(-e "s/^\(.*ALERT_RECIPIENTS *=\).*/\1 $alertRecip/")
+    [[ -n "$siteLat"      ]] && sedCmd+=(-e "s/^\(.*LATITUDE *=\).*/\1 $siteLat/")
+    [[ -n "$siteLon"      ]] && sedCmd+=(-e "s/^\(.*LONGITUDE *=\).*/\1 $siteLon/")
+    [[ -n "$camRot"       ]] && sedCmd+=(-e "s/^\(.*CAMERA_ROTATION *=\).*/\1 $camRot/")
+    [[ -n "$sensorOffset" ]] && sedCmd+=(-e "s/^\(.*SENSOR_OFFSET *=\).*/\1 $sensorOffset/")
+    [[ -n "$tempFactor"   ]] && sedCmd+=(-e "s/^\(.*SENSOR_TEMP_FACTOR *=\).*/\1 $tempFactor/")
+    [[ -n "$APIpass"      ]] && sedCmd+=(-e "s/^\(.*API_PASS *=\).*/\1 $APIpass/")
 
     # Only run sed if there are replacements
     if (( ${#sedCmd[@]} > 0 )); then
