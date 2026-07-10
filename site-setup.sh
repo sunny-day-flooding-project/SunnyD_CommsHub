@@ -253,35 +253,47 @@ echo
 read -n 1 -p "Would you like to enter config values? [y,N]: " doThisSection
 echo
 doThisSection=${doThisSection:-"n"}
+
 if [ "$doThisSection" == "y" ]; then
     pushd /home/pi/bin > /dev/null
 
+	echo "Hit Enter (only) to leave value unchanged."
     read -p "Enter PLACE name: " placeName
     read -p "Enter SITE ID: " siteID
     read -p "Enter CAMERA ID: " cameraID
-	read -p "Enter alert message email addresses (semi-colon separated): " alertRecip
-	echo "Lat/Lon can be approximate and are used to determine sunrise and sunset times."
-	echo "Enter in floating-point degrees, with [NESW] appended."
-	read -p "Enter approximate site latitude: " siteLat
-	read -p "Enter approximate site longitude: " siteLon
-	read -p "Enter camera rotation in degrees: " camRot
+    read -p "Enter alert message email addresses (semi-colon separated): " alertRecip
+    echo "Lat/Lon can be approximate and are used to determine sunrise and sunset times."
+    echo "Enter in floating-point degrees, with [NESW] appended."
+    read -p "Enter approximate site latitude: " siteLat
+    read -p "Enter approximate site longitude: " siteLon
+    read -p "Enter camera rotation in degrees: " camRot
     read -p "Enter sensor calibration offset: " sensorOffset
     read -p "Enter sensor temperature factor: " tempFactor
     read -p "Enter API password: " APIpass
-    
-    sed -e s/PLACE.*=.*/"PLACE = '$placeName'"/ \
-        -e s/SITE_ID.*=.*/"SITE_ID = $siteID"/ \
-        -e s/CAMERA_ID.*=.*/"CAMERA_ID = $cameraID"/ \
-        -e s/ALERT_RECIPIENTS.*=.*/"ALERT_RECIPIENTS = $alertRecip"/ \
-        -e s/LATITUDE.*=.*/"LATITUDE = $siteLat"/ \
-        -e s/LONGITUDE.*=.*/"LONGITUDE = $siteLon"/ \
-		-e s/CAMERA_ROTATION.*=.*/"CAMERA_ROTATION = $camRot"/ \
-        -e s/SENSOR_OFFSET.*=.*/"SENSOR_OFFSET = $sensorOffset"/ \
-        -e s/SENSOR_TEMP_FACTOR.*=.*/"SENSOR_TEMP_FACTOR = $tempFactor"/ \
-        -e s/API_PASS.*=.*/"API_PASS = $APIpass"/ \
-        < config.ini > tmp.tmp
-    su pi -c 'cp tmp.tmp config.ini'
-	rm tmp.tmp
+
+    # Build sed command dynamically
+    sedCmd=()
+
+    [[ -n "$placeName"    ]] && sedCmd+=(-e "s/^PLACE *=.*/PLACE = '$placeName'/")
+    [[ -n "$siteID"       ]] && sedCmd+=(-e "s/^SITE_ID *=.*/SITE_ID = $siteID/")
+    [[ -n "$cameraID"     ]] && sedCmd+=(-e "s/^CAMERA_ID *=.*/CAMERA_ID = $cameraID/")
+    [[ -n "$alertRecip"   ]] && sedCmd+=(-e "s/^ALERT_RECIPIENTS *=.*/ALERT_RECIPIENTS = $alertRecip/")
+    [[ -n "$siteLat"      ]] && sedCmd+=(-e "s/^LATITUDE *=.*/LATITUDE = $siteLat/")
+    [[ -n "$siteLon"      ]] && sedCmd+=(-e "s/^LONGITUDE *=.*/LONGITUDE = $siteLon/")
+    [[ -n "$camRot"       ]] && sedCmd+=(-e "s/^CAMERA_ROTATION *=.*/CAMERA_ROTATION = $camRot/")
+    [[ -n "$sensorOffset" ]] && sedCmd+=(-e "s/^SENSOR_OFFSET *=.*/SENSOR_OFFSET = $sensorOffset/")
+    [[ -n "$tempFactor"   ]] && sedCmd+=(-e "s/^SENSOR_TEMP_FACTOR *=.*/SENSOR_TEMP_FACTOR = $tempFactor/")
+    [[ -n "$APIpass"      ]] && sedCmd+=(-e "s/^API_PASS *=.*/API_PASS = $APIpass/")
+
+    # Only run sed if there are replacements
+    if (( ${#sedCmd[@]} > 0 )); then
+        sed "${sedCmd[@]}" config.ini > tmp.tmp
+        su pi -c 'cp tmp.tmp config.ini'
+        rm tmp.tmp
+    else
+        echo "No values entered; config.ini left unchanged."
+    fi
+
     popd > /dev/null
 fi
 
