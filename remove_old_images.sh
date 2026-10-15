@@ -1,2 +1,2 @@
-find /home/pi/webcam/* -type d -ctime +28 -exec rm -rf {} \;
+find /home/pi/webcam/* -type d -ctime +90 -exec rm -rf {} \;
 
